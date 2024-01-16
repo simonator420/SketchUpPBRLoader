@@ -7,37 +7,71 @@
 
     function updateFolderPath(path) {
       document.getElementById('folderPath').innerText = path;
+      sketchup.listSubfolders(path);
+    }
+
+    function populateSubfolderList(subfolders) {
+      var list = document.getElementById('subfolderList');
+      list.innerHTML = '';
+      subfolders.forEach(function(subfolder) {
+        var item = document.createElement('div');
+        item.className = 'checkbox-row';
+        item.innerHTML = '<input type="checkbox" id="' + subfolder + 
+                        '"><label for="' + subfolder + '">' + subfolder + '</label>';
+        list.appendChild(item);
+      });
     }
   </script>
   <style>
     .row {
       margin-bottom: 10px;
       display: flex;
-      justify-content: space-between; /* Spreads out label and input */
+      justify-content: space-between;
       align-items: center;
     }
     .label {
       font-size: 16px;
-      width: 30%; /* Width of label */
-      text-align: left; /* Aligns label text to left */
+      width: 30%;
+      text-align: left;
     }
     .input {
-      width: 40%; /* Width of input elements */
-      text-align: right; /* Aligns input elements to right */
+      width: 40%;
+      text-align: right;
     }
     .input button, .input select {
-      font-size: 16px;
-      width: 100%; /* Button and combobox take full width of their container */
+      width: 100%;
     }
     .checkbox-row {
       display: flex;
       font-size: 16px;
       text-align: left;
-      margin-top: 5px; /* Adjusts vertical spacing between checkboxes */
+      margin-top: 5px;
+      margin-bottom: 10px;
     }
+    .button-row {
+      justify-content: flex-start;
+      text-align: left;
+    }
+    .subfolder-list {
+      height: 250px;
+      overflow-x: auto;
+      overflow-y: auto;
+      border: 1px solid #ccc;
+      margin-top: 10px;
+      padding: 5px;
+    }
+
+    .checkbox-row {
+      white-space: nowrap;
+      min-width: 100%;
+      display: flex;
+      align-items: center;
+    }
+
   </style>
 </head>
 <body style="text-align: center; padding: 10px;">
+
   <div class="row">
     <div class="label">
       <label>Material Folder:</label>
@@ -46,6 +80,7 @@
       <button style="font-size: 16px;" onclick="onClickButton()">Browse</button>
     </div>
   </div>
+
   <div class="row">
     <div class="label">
       <label>Select Renderer:</label>
@@ -57,25 +92,42 @@
       </select>
     </div>
   </div>
+
   <div class="row">
     <div id="folderPath" style="font-size: 14px; flex: 1; text-align: left;">
     </div>
   </div>
+
   <div class="checkbox-row">
     <input type="checkbox" id="loadAO">
     <label for="loadAO">Include ambient occlusion (AO) maps</label>
   </div>
+
   <div class="checkbox-row">
     <input type="checkbox" id="loadDisp">
     <label for="loadDisp">Include displacement maps</label>
   </div>
+
   <div class="checkbox-row">
     <input type="checkbox" id="load16Disp">
     <label for="load16Disp">Use 16 bit displacement maps (when available)</label>
   </div>
+
   <div class="checkbox-row">
     <input type="checkbox" id="load16Nrm">
     <label for="load16Nrm">Use 16 bit normal maps (when available)</label>
   </div>
+
+  <div class="button-row">
+    <button id="btnSelectAll" onclick="/*Add your function*/">Select All</button>
+    <button id="btnRefresh" onclick="/*Add your function*/">Refresh</button>
+    <button id="btnAddToQueue" onclick="/*Add your function*/">Add To Queue</button>
+    <button id="btnClean" onclick="/*Add your function*/">Clean</button>
+  </div>
+
+  <div id="subfolderList" class="subfolder-list">
+    <!-- Dynamically populated subfolder items will go here -->
+  </div>
+
   </body>
 </html>

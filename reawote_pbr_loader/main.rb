@@ -28,9 +28,20 @@ module Reawote
       end
     end
 
+    def self.list_subfolders(path)
+      subfolders = Dir.entries(path).select { |entry| 
+        File.directory?(File.join(path, entry)) && !(entry =='.' || entry == '..') 
+      }
+      @@dialog.execute_script("populateSubfolderList(#{subfolders.to_json})")
+    end
+
     def self.add_callbacks
       @@dialog.add_action_callback("browseFolder") { |action_context|
         browse_folder
+      }
+
+      @@dialog.add_action_callback("listSubfolders") { |action_context, path|
+        list_subfolders(path)
       }
     end
 
