@@ -5,6 +5,10 @@
       sketchup.browseFolder();
     }
 
+    function selectNewFolder() {
+      sketchup.browseNewFolder();
+    }
+
     function updateFolderPath(path) {
       document.getElementById('folderPath').innerText = path;
       sketchup.listSubfolders(path);
@@ -17,10 +21,48 @@
         var item = document.createElement('div');
         item.className = 'checkbox-row';
         item.innerHTML = '<input type="checkbox" id="' + subfolder + 
-                        '"><label for="' + subfolder + '">' + subfolder + '</label>';
+                          '"><label for="' + subfolder + '">' + subfolder + '</label>';
         list.appendChild(item);
       });
     }
+
+    function clearList() {
+      var list = document.getElementById('subfolderList');
+      list.innerHTML = '';
+    }
+
+    function addFolderToSubfolderList(subfolders) {
+      var list = document.getElementById('subfolderList');
+      subfolders.forEach(function(subfolder) {
+        var item = document.createElement('div');
+        item.className = 'checkbox-row';
+        item.innerHTML = '<input type="checkbox" id="' + subfolder + 
+                          '"><label for="' + subfolder + '">' + subfolder + '</label>';
+        list.appendChild(item);
+      });
+    }
+
+    function selectAllSubfolders() {
+      var checkboxes = document.querySelectorAll('#subfolderList .checkbox-row input[type="checkbox"]');
+      var allChecked = Array.from(checkboxes).every(checkbox => checkbox.checked);
+
+      checkboxes.forEach(function(checkbox) {
+        checkbox.checked = !allChecked;
+      });
+    }
+
+    function refreshSubfolderList() {
+      sketchup.refreshAllSubfolderLists();
+    }
+
+    function cleanPlugin() {
+      // Clear the subfolder list
+      clearList();
+      document.getElementById('folderPath').innerText = "";
+      sketchup.clearInitialSelection();
+    }
+
+
   </script>
   <style>
     .row {
@@ -119,14 +161,13 @@
   </div>
 
   <div class="button-row">
-    <button id="btnSelectAll" onclick="/*Add your function*/">Select All</button>
-    <button id="btnRefresh" onclick="/*Add your function*/">Refresh</button>
-    <button id="btnAddToQueue" onclick="/*Add your function*/">Add To Queue</button>
-    <button id="btnClean" onclick="/*Add your function*/">Clean</button>
+    <button id="btnSelectAll" onclick="selectAllSubfolders()">Select All</button>
+      <button id="btnRefresh" onclick="refreshSubfolderList()">Refresh</button>
+    <button id="btnAddToQueue" onclick="selectNewFolder()">Add To Queue</button>
+    <button id="btnClean" onclick="cleanPlugin()">Clean</button>
   </div>
 
   <div id="subfolderList" class="subfolder-list">
-    <!-- Dynamically populated subfolder items will go here -->
   </div>
 
   </body>
