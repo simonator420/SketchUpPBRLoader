@@ -22,6 +22,7 @@ module Reawote
     end
 
     def self.browse_folder
+      @@initial_selection.clear
       selected_folder = UI.select_directory(title: "Select a Folder")
       if selected_folder
         @@initial_selection << selected_folder
