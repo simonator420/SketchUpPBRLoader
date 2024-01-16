@@ -21,8 +21,22 @@ module Reawote
       dialog
     end
 
+    def self.browse_folder
+      selected_folder = UI.select_directory(title: "Select a Folder")
+      if selected_folder
+        @@dialog.execute_script("updateFolderPath('#{selected_folder}')")
+      end
+    end
+
+    def self.add_callbacks
+      @@dialog.add_action_callback("browseFolder") { |action_context|
+        browse_folder
+      }
+    end
+
     def self.display_dialog
       @@dialog = create_dialog
+      add_callbacks
       @@dialog.show if @@dialog
     end
 

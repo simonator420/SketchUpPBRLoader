@@ -1,20 +1,53 @@
-<!-- dialog.html -->
-
 <html>
-  <head>
-    <script>
-      function onClickButton() {
-        // Add your button click logic here
-        alert('Browse Clicked!');
-      }
-    </script>
-  </head>
-  <body style="text-align: center; padding: 10px;">
-    <div style="float: left; width: 50%;">
-      <label style="font-size: 16px;">Material Folder:</label>
+<head>
+  <script>
+    function onClickButton() {
+      sketchup.browseFolder();
+    }
+
+    function updateFolderPath(path) {
+      document.getElementById('folderPath').innerText = path;
+    }
+  </script>
+  <style>
+    .row {
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .label {
+      font-size: 16px;
+      flex: 1;
+    }
+    .input {
+      flex: 1;
+    }
+  </style>
+</head>
+<body style="text-align: center; padding: 10px;">
+  <div class="row">
+    <div class="label">
+      <label>Material Folder:</label>
     </div>
-    <div style="float: right; width: 50%;">
+    <div class="input">
       <button style="font-size: 16px;" onclick="onClickButton()">Browse</button>
     </div>
-  </body>
+  </div>
+  <div class="row">
+    <div class="label">
+      <label>Select Renderer:</label>
+    </div>
+    <div class="input">
+      <select style="font-size: 16px;">
+        <option value="corona">Corona</option>
+        <option value="vray">VRay</option>
+      </select>
+    </div>
+  </div>
+  <div class="row">
+    <div id="folderPath" style="font-size: 14px; flex: 1; text-align: left;">
+    </div>
+  </div>
+</body>
 </html>
