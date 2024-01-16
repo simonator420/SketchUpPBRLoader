@@ -13,15 +13,27 @@
     .row {
       margin-bottom: 10px;
       display: flex;
+      justify-content: space-between; /* Spreads out label and input */
       align-items: center;
-      justify-content: space-between;
     }
     .label {
       font-size: 16px;
-      flex: 1;
+      width: 30%; /* Width of label */
+      text-align: left; /* Aligns label text to left */
     }
     .input {
-      flex: 1;
+      width: 40%; /* Width of input elements */
+      text-align: right; /* Aligns input elements to right */
+    }
+    .input button, .input select {
+      font-size: 16px;
+      width: 100%; /* Button and combobox take full width of their container */
+    }
+    .checkbox-row {
+      display: flex;
+      font-size: 16px;
+      text-align: left;
+      margin-top: 5px; /* Adjusts vertical spacing between checkboxes */
     }
   </style>
 </head>
@@ -49,5 +61,21 @@
     <div id="folderPath" style="font-size: 14px; flex: 1; text-align: left;">
     </div>
   </div>
-</body>
+  <div class="checkbox-row">
+    <input type="checkbox" id="loadAO">
+    <label for="loadAO">Include ambient occlusion (AO) maps</label>
+  </div>
+  <div class="checkbox-row">
+    <input type="checkbox" id="loadDisp">
+    <label for="loadDisp">Include displacement maps</label>
+  </div>
+  <div class="checkbox-row">
+    <input type="checkbox" id="load16Disp">
+    <label for="load16Disp">Use 16 bit displacement maps (when available)</label>
+  </div>
+  <div class="checkbox-row">
+    <input type="checkbox" id="load16Nrm">
+    <label for="load16Nrm">Use 16 bit normal maps (when available)</label>
+  </div>
+  </body>
 </html>

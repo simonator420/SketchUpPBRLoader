@@ -10,8 +10,8 @@ module Reawote
         dialog_title: 'Reawote PBR Loader',
         preferences_key: 'com.example.ReawotePBRLoader',
         style: UI::HtmlDialog::STYLE_DIALOG,
-        height: 150,
-        width: 400
+        height: 750,
+        width: 430
       }
       dialog = UI::HtmlDialog.new(options)
       dialog.set_size(options[:width], options[:height])
