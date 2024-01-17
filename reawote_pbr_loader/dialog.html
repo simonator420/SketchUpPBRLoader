@@ -24,30 +24,41 @@
     function populateSubfolderList(subfolders) {
       var list = document.getElementById('subfolderList');
       list.innerHTML = '';
-      subfolders.forEach(function(subfolder) {
+      subfolders.forEach(function(subfolder, index) {
         var item = document.createElement('div');
         item.className = 'checkbox-row';
         item.innerHTML = '<input type="checkbox" id="' + subfolder + 
                           '"><label for="' + subfolder + '">' + subfolder + '</label>';
         list.appendChild(item);
+
+        item.addEventListener('click', function() {
+          sketchup.subfolderSelected(subfolder, index);
+        });
       });
     }
+
+    function addFolderToSubfolderList(subfolders) {
+      var list = document.getElementById('subfolderList');
+      var existingItemsCount = list.children.length;
+      subfolders.forEach(function(subfolder, index) {
+        var item = document.createElement('div');
+        item.className = 'checkbox-row';
+        item.innerHTML = '<input type="checkbox" id="' + subfolder + 
+                          '"><label for="' + subfolder + '">' + subfolder + '</label>';
+        list.appendChild(item);
+
+        item.addEventListener('click', function() {
+          sketchup.subfolderSelected(subfolder, index + existingItemsCount);
+        });
+      });
+    }
+
 
     function clearList() {
       var list = document.getElementById('subfolderList');
       list.innerHTML = '';
     }
 
-    function addFolderToSubfolderList(subfolders) {
-      var list = document.getElementById('subfolderList');
-      subfolders.forEach(function(subfolder) {
-        var item = document.createElement('div');
-        item.className = 'checkbox-row';
-        item.innerHTML = '<input type="checkbox" id="' + subfolder + 
-                          '"><label for="' + subfolder + '">' + subfolder + '</label>';
-        list.appendChild(item);
-      });
-    }
 
     function selectAllSubfolders() {
       var checkboxes = document.querySelectorAll('#subfolderList .checkbox-row input[type="checkbox"]');

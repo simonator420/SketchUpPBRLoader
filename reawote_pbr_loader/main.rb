@@ -2,6 +2,7 @@ module Reawote
   module ReawotePBRLoader
 
     @@initial_selection = []
+    @@subfolder_paths = []
     @@percentage = 1.0
     @@dialog = nil
 
@@ -23,6 +24,7 @@ module Reawote
 
     def self.browse_folder
       @@initial_selection.clear
+      @@subfolder_paths.clear
       selected_folder = UI.select_directory(title: "Select a Folder")
       if selected_folder
         @@initial_selection << selected_folder
@@ -50,6 +52,11 @@ module Reawote
             folder_name
           end
         end
+
+        formatted_subfolders.each do |subfolder_name|
+          full_path = File.join(selected_folder, subfolder_name)
+          @@subfolder_paths << full_path
+        end
       
         @@dialog.execute_script("addFolderToSubfolderList(#{formatted_subfolders.to_json})")
 
@@ -57,21 +64,28 @@ module Reawote
     end
 
     def self.list_subfolders(path)
+      @@subfolder_paths.clear # Clear previous paths
       subfolders = Dir.entries(path).select { |entry| 
         File.directory?(File.join(path, entry)) && !(entry =='.' || entry == '..') 
       }.sort
     
       formatted_subfolders = subfolders.map do |folder_name|
         parts = folder_name.split("_")
-        if parts.count >= 3
+        formatted_name = if parts.count >= 3
           "#{parts[0]}_#{parts[1]}_#{parts[2]}"
         else
           folder_name
         end
+    
+        # Add the full path of the subfolder to @@subfolder_paths
+        @@subfolder_paths << File.join(path, folder_name)
+    
+        formatted_name
       end
     
       @@dialog.execute_script("populateSubfolderList(#{formatted_subfolders.to_json})")
     end
+    
 
     def self.refresh_all(path)
       subfolders = Dir.entries(path).select { |entry| 
@@ -100,6 +114,7 @@ module Reawote
 
     def self.clearInitialSelection
       @@initial_selection.clear
+      @@subfolder_paths.clear
     end
     
     def self.add_callbacks
@@ -122,6 +137,16 @@ module Reawote
       @@dialog.add_action_callback("refreshAllSubfolderLists") { |action_context|
         refreshAllSubfolderLists
       }
+
+      @@dialog.add_action_callback("subfolderSelected") { |action_context, subfolder_name, index|
+        if index >= 0 && index < @@subfolder_paths.length
+          selected_path = @@subfolder_paths[index]
+          UI.messagebox("Selected Subfolder Path: #{selected_path}, Index: #{index}")
+        else
+          UI.messagebox("No match found for subfolder: #{subfolder_name}, Index: #{index}")
+        end
+      }
+
     end
 
     def self.display_dialog
