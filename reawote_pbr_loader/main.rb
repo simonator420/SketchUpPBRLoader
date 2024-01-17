@@ -12,7 +12,7 @@ module Reawote
         preferences_key: 'com.example.ReawotePBRLoader',
         style: UI::HtmlDialog::STYLE_DIALOG,
         height: 750,
-        width: 430
+        width: 500
       }
       dialog = UI::HtmlDialog.new(options)
       dialog.set_size(options[:width], options[:height])
@@ -94,17 +94,25 @@ module Reawote
     
       formatted_subfolders = subfolders.map do |folder_name|
         parts = folder_name.split("_")
-        if parts.count >= 3
+        formatted_name = if parts.count >= 3
           "#{parts[0]}_#{parts[1]}_#{parts[2]}"
         else
           folder_name
         end
+    
+        # Add the full path of the subfolder to @@subfolder_paths
+        full_path = File.join(path, folder_name)
+        @@subfolder_paths << full_path
+    
+        formatted_name
       end
     
       @@dialog.execute_script("addFolderToSubfolderList(#{formatted_subfolders.to_json})")
     end
     
+    
     def self.refreshAllSubfolderLists
+      @@subfolder_paths.clear
       @@dialog.execute_script("clearList();")
       for selected_folder in @@initial_selection do
         # UI.messagebox("selected_folder: #{selected_folder}")
@@ -159,7 +167,10 @@ module Reawote
 
                 if target_file_name
                   full_target_file_path = File.join(preview_subfolder_path, target_file_name)
-                  UI.messagebox("Found target file: #{full_target_file_path}")
+                  subfolder_display_name = File.basename(selected_path)  # Extract the subfolder name from the path
+                  # Use execute_script to call the JavaScript function to update the image and subfolder name
+                  @@dialog.execute_script("updateMaterialPreviewImage('#{full_target_file_path}', '#{subfolder_display_name}')")
+                  # UI.messagebox("Found target file: #{full_target_file_path}")
                 
                 else
                   UI.messagebox("Didnt found target file in: #{preview_subfolder_path}")

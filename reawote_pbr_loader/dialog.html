@@ -19,6 +19,11 @@
       });
 
       document.querySelector('button[onclick="onClickButton()"]').disabled = true;
+
+      document.getElementById('loadAO').checked = true;
+      document.getElementById('loadDisp').checked = true;
+      document.getElementById('load16Disp').checked = true;
+      document.getElementById('load16Nrm').checked = true;
     }
 
     function populateSubfolderList(subfolders) {
@@ -53,12 +58,10 @@
       });
     }
 
-
     function clearList() {
       var list = document.getElementById('subfolderList');
       list.innerHTML = '';
     }
-
 
     function selectAllSubfolders() {
       var checkboxes = document.querySelectorAll('#subfolderList .checkbox-row input[type="checkbox"]');
@@ -75,6 +78,11 @@
 
     function cleanPlugin() {
       clearList();
+      document.getElementById('loadAO').checked = false;
+      document.getElementById('loadDisp').checked = false;
+      document.getElementById('load16Disp').checked = false;
+      document.getElementById('load16Nrm').checked = false;
+      document.getElementById('materialPreview').style.display = 'none';
       document.getElementById('folderPath').innerText = "";
       document.querySelectorAll('select, input[type="checkbox"], button').forEach(element => {
         element.disabled = true;
@@ -84,6 +92,18 @@
       sketchup.clearInitialSelection();
     }
 
+    function updateMaterialPreviewImage(imagePath, subfolderName) {
+      var previewSection = document.getElementById('materialPreview');
+      var previewImage = document.getElementById('materialPreviewImage');
+      var subfolderNameElement = document.getElementById('subfolderName');
+
+      previewImage.src = imagePath;
+
+      subfolderNameElement.textContent = subfolderName;
+
+      previewSection.style.display = 'block';
+    }
+
 
   </script>
   <style>
@@ -91,6 +111,7 @@
       font-family: 'Poppins', sans-serif;
       font-size: 14px;
       font-weight: 300;
+      background-color: #f6f6f9;
     }
 
     .row {
@@ -137,12 +158,13 @@
       text-align: left;
     }
     .subfolder-list {
-      height: 250px;
+      height: 280px;
       overflow-x: auto;
       overflow-y: auto;
       border: 1px solid #ccc;
       margin-top: 10px;
       padding: 5px;
+      background-color: white;
     }
 
     .checkbox-row {
@@ -151,6 +173,24 @@
       display: flex;
       align-items: center;
     }
+
+    .material-preview {
+      text-align: left;
+      padding-top: 10px;
+    }
+
+    .material-preview img{
+      border: 1px solid #ccc;
+    }
+
+    #subfolderName {
+    display: inline-block;
+    vertical-align: middle;
+    max-width: 490px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 
   </style>
 </head>
@@ -212,5 +252,12 @@
   <div id="subfolderList" class="subfolder-list">
   </div>
 
+  <div id="materialPreview" class="material-preview" style="display: none;">
+    <img id="materialPreviewImage" src="" alt="Material Preview" style="max-width: 100%; max-height: 85px; display: inline-block; vertical-align: middle;" />
+    <span id="subfolderName" style="display: inline-block; vertical-align: middle;"></span>
+  </div>
+  
+  
+  
   </body>
 </html>
