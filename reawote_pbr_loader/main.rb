@@ -37,31 +37,31 @@ module Reawote
       selected_folder = UI.select_directory(title: "Select a New Folder to Add to Queue")
       if selected_folder
         @@initial_selection << selected_folder
-        # @@dialog.execute_script("addFolderToSubfolderList('#{selected_folder}')")
         UI.messagebox("Initial Selection: #{@@initial_selection}")
-
+    
         subfolders = Dir.entries(selected_folder).select { |entry| 
           File.directory?(File.join(selected_folder, entry)) && !(entry =='.' || entry == '..') 
         }.sort
       
         formatted_subfolders = subfolders.map do |folder_name|
           parts = folder_name.split("_")
-          if parts.count >= 3
+          formatted_name = if parts.count >= 3
             "#{parts[0]}_#{parts[1]}_#{parts[2]}"
           else
             folder_name
           end
-        end
-
-        formatted_subfolders.each do |subfolder_name|
-          full_path = File.join(selected_folder, subfolder_name)
+    
+          # Add the full path of the subfolder to @@subfolder_paths
+          full_path = File.join(selected_folder, folder_name)
           @@subfolder_paths << full_path
+    
+          formatted_name
         end
       
         @@dialog.execute_script("addFolderToSubfolderList(#{formatted_subfolders.to_json})")
-
       end
     end
+    
 
     def self.list_subfolders(path)
       @@subfolder_paths.clear # Clear previous paths
@@ -141,7 +141,36 @@ module Reawote
       @@dialog.add_action_callback("subfolderSelected") { |action_context, subfolder_name, index|
         if index >= 0 && index < @@subfolder_paths.length
           selected_path = @@subfolder_paths[index]
-          UI.messagebox("Selected Subfolder Path: #{selected_path}, Index: #{index}")
+          puts "Selected Path: #{selected_path}"
+
+          if File.directory?(selected_path)
+            begin
+              preview_subfolder_name = Dir.entries(selected_path).find do |entry|
+                entry.downcase == 'preview' && File.directory?(File.join(selected_path, entry))
+              end
+
+              if preview_subfolder_name
+                preview_subfolder_path = File.join(selected_path, preview_subfolder_name)
+                
+                target_file_name = Dir.entries(preview_subfolder_path).find do |entry|
+                  base_name = File.basename(entry, ".*").downcase
+                  (base_name.include?('fabric') || base_name.include?('sphere')) && File.file?(File.join(preview_subfolder_path, entry))
+                end
+
+                if target_file_name
+                  full_target_file_path = File.join(preview_subfolder_path, target_file_name)
+                  UI.messagebox("Found target file: #{full_target_file_path}")
+                
+                else
+                  UI.messagebox("Didnt found target file in: #{preview_subfolder_path}")
+                end
+              end
+            rescue => e
+              UI.messagebox("Failed to list directory contents: #{e.message}")
+            end
+          else
+            UI.messagebox("Directory does not exist: #{selected_path}")
+          end
         else
           UI.messagebox("No match found for subfolder: #{subfolder_name}, Index: #{index}")
         end
