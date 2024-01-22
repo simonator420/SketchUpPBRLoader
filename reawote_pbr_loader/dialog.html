@@ -13,7 +13,9 @@
     function updateFolderPath(path) {
       document.getElementById('folderPath').innerText = path;
       sketchup.listSubfolders(path);
+    }
 
+    function populateSubfolderList(subfolders) {
       document.querySelectorAll('select, input[type="checkbox"], button').forEach(element => {
         element.disabled = false;
       });
@@ -24,9 +26,7 @@
       document.getElementById('loadDisp').checked = true;
       document.getElementById('load16Disp').checked = true;
       document.getElementById('load16Nrm').checked = true;
-    }
 
-    function populateSubfolderList(subfolders) {
       var list = document.getElementById('subfolderList');
       list.innerHTML = '';
       subfolders.forEach(function(subfolder, index) {
@@ -102,6 +102,10 @@
       subfolderNameElement.textContent = subfolderName;
 
       previewSection.style.display = 'block';
+    }
+
+    function loadMaterials() {
+      console.log('Load Materials button clicked');
     }
 
 
@@ -190,7 +194,11 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-  }
+    }
+
+    .full-width-button {
+      width: 100%;
+    }
 
   </style>
 </head>
@@ -205,7 +213,7 @@
     </div>
   </div>
 
-  <div class="row">
+  <!-- <div class="row">
     <div class="label">
       <label>Select Renderer:</label>
     </div>
@@ -215,7 +223,7 @@
         <option value="vray">VRay</option>
       </select>
     </div>
-  </div>
+  </div> -->
 
   <div class="row">
     <div id="folderPath" style="font-size: 14px; flex: 1; text-align: left;">
@@ -240,6 +248,10 @@
   <div class="checkbox-row">
     <input type="checkbox" id="load16Nrm" disabled>
     <label for="load16Nrm">Use 16 bit normal maps (when available)</label>
+  </div>
+
+  <div class="row">
+    <button id="btnLoadMaterials" class="full-width-button" onclick="loadMaterials()" disabled>Load Materials</button>
   </div>
 
   <div class="button-row">

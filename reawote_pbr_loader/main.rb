@@ -29,7 +29,7 @@ module Reawote
       if selected_folder
         @@initial_selection << selected_folder
         @@dialog.execute_script("updateFolderPath('#{selected_folder}')")
-        UI.messagebox("Initial Selection: #{@@initial_selection}")
+        # UI.messagebox("Initial Selection: #{@@initial_selection}")
       end
     end
 
@@ -37,12 +37,15 @@ module Reawote
       selected_folder = UI.select_directory(title: "Select a New Folder to Add to Queue")
       if selected_folder
         @@initial_selection << selected_folder
-        UI.messagebox("Initial Selection: #{@@initial_selection}")
+        # UI.messagebox("Initial Selection: #{@@initial_selection}")
     
         subfolders = Dir.entries(selected_folder).select { |entry| 
           File.directory?(File.join(selected_folder, entry)) && !(entry =='.' || entry == '..') 
         }.sort
-      
+        
+        # Define the valid sub-subfolder names
+        valid_sub_subfolder_names = (1..16).map { |n| "#{n}K" }
+        
         formatted_subfolders = subfolders.map do |folder_name|
           parts = folder_name.split("_")
           formatted_name = if parts.count >= 3
@@ -51,16 +54,31 @@ module Reawote
             folder_name
           end
     
-          # Add the full path of the subfolder to @@subfolder_paths
-          full_path = File.join(selected_folder, folder_name)
-          @@subfolder_paths << full_path
+          # Check if the subfolder has at least one valid sub-subfolder
+          sub_subfolders = Dir.entries(File.join(selected_folder, folder_name)).select { |entry| 
+            File.directory?(File.join(selected_folder, folder_name, entry)) && !(entry =='.' || entry == '..') 
+          }
+          
+          if sub_subfolders.any? { |sub_subfolder| valid_sub_subfolder_names.include?(sub_subfolder) }
+            # Add the full path of the subfolder to @@subfolder_paths if valid
+            full_path = File.join(selected_folder, folder_name)
+            @@subfolder_paths << full_path
     
-          formatted_name
+            formatted_name
+          else
+            nil  # Exclude the subfolder if it doesn't have a valid sub-subfolder
+          end
+        end.compact  # Remove nil elements from the array
+    
+        # Print and execute script only if formatted_subfolders is not empty
+        if formatted_subfolders.any?
+          puts "Formatted Subfolders: #{formatted_subfolders}"
+          @@dialog.execute_script("addFolderToSubfolderList(#{formatted_subfolders.to_json})")
+        else
+          UI.messagebox("No Reawote materials were found in the selected folder: #{selected_folder}")
         end
-      
-        @@dialog.execute_script("addFolderToSubfolderList(#{formatted_subfolders.to_json})")
       end
-    end
+    end       
     
 
     def self.list_subfolders(path)
@@ -68,6 +86,9 @@ module Reawote
       subfolders = Dir.entries(path).select { |entry| 
         File.directory?(File.join(path, entry)) && !(entry =='.' || entry == '..') 
       }.sort
+    
+      # Define the valid sub-subfolder names
+      valid_sub_subfolder_names = (1..16).map { |n| "#{n}K" }
     
       formatted_subfolders = subfolders.map do |folder_name|
         parts = folder_name.split("_")
@@ -77,15 +98,30 @@ module Reawote
           folder_name
         end
     
-        # Add the full path of the subfolder to @@subfolder_paths
-        @@subfolder_paths << File.join(path, folder_name)
+        # Check if the subfolder has at least one valid sub-subfolder
+        sub_subfolders = Dir.entries(File.join(path, folder_name)).select { |entry| 
+          File.directory?(File.join(path, folder_name, entry)) && !(entry =='.' || entry == '..') 
+        }
     
-        formatted_name
+        if sub_subfolders.any? { |sub_subfolder| valid_sub_subfolder_names.include?(sub_subfolder) }
+          # Add the full path of the subfolder to @@subfolder_paths if valid
+          @@subfolder_paths << File.join(path, folder_name)
+    
+          formatted_name
+        else
+          nil  # Exclude the subfolder if it doesn't have a valid sub-subfolder
+        end
+      end.compact  # Remove nil elements from the array
+    
+      # Print and execute script only if formatted_subfolders is not empty
+      if formatted_subfolders.any?
+        puts "Formatted Subfolders: #{formatted_subfolders}"
+        @@dialog.execute_script("populateSubfolderList(#{formatted_subfolders.to_json})")
+      else
+        UI.messagebox("No Reawote materials were found in the selected folder: #{path}")
       end
-    
-      @@dialog.execute_script("populateSubfolderList(#{formatted_subfolders.to_json})")
     end
-    
+        
 
     def self.refresh_all(path)
       subfolders = Dir.entries(path).select { |entry| 
