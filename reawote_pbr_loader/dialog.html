@@ -105,7 +105,14 @@
     }
 
     function loadMaterials() {
-      console.log('Load Materials button clicked');
+
+      // Iterate over selected subfolders and create V-Ray materials
+      document.querySelectorAll('#subfolderList .checkbox-row input[type="checkbox"]').forEach(function(checkbox) {
+        if (checkbox.checked) {
+          var subfolderName = checkbox.id; // assuming the checkbox id is the subfolder name
+          sketchup.createVrayMaterial(subfolderName);
+        }
+      });
     }
 
 

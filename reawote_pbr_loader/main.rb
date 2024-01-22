@@ -160,6 +160,37 @@ module Reawote
       @@initial_selection.clear
       @@subfolder_paths.clear
     end
+
+    def self.create_vray_material(material_name)
+      # Initialize the V-Ray context
+      context = VRay::Context.active
+      model = context.model
+      scene = context.scene
+      renderer = context.renderer
+      
+      # Ensure V-Ray for SketchUp is present
+      unless scene && renderer
+        puts "V-Ray for SketchUp is not detected!"
+        return
+      end
+      
+      # Start a scene change transaction
+      scene.change do
+        # Create a new V-Ray material as a plugin in the scene
+        material_plugin_path = "/#{material_name}"
+        my_material_plugin = scene.create(:MtlSingleBRDF, material_plugin_path)
+        my_material_plugin[:diffuse] = VRay::Color.new(0.95,0.95,0.95)
+        
+      end
+    
+      puts "V-Ray material '#{material_name}' with an additional VRayMtl layer created successfully."
+    end
+    
+
+    def self.color_to_vraycolor(color)
+      VRay::Color.new(color.red / 255.0, color.green / 255.0, color.blue / 255.0)
+    end
+
     
     def self.add_callbacks
       @@dialog.add_action_callback("browseFolder") { |action_context|
@@ -181,6 +212,10 @@ module Reawote
       @@dialog.add_action_callback("refreshAllSubfolderLists") { |action_context|
         refreshAllSubfolderLists
       }
+
+      @@dialog.add_action_callback("createVrayMaterial") { |action_context, subfolder_name|
+        create_vray_material(subfolder_name)
+      } 
 
       @@dialog.add_action_callback("subfolderSelected") { |action_context, subfolder_name, index|
         if index >= 0 && index < @@subfolder_paths.length
