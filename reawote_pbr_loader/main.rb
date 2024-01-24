@@ -173,6 +173,9 @@ module Reawote
         puts "V-Ray for SketchUp is not detected!"
         return
       end
+    
+      # Define my_material_plugin here so it's accessible throughout the method
+      my_material_plugin = nil
       
       # Start a scene change transaction
       scene.change do
@@ -180,15 +183,14 @@ module Reawote
         material_plugin_path = "/#{material_name}"
         my_material_plugin = scene.create(:MtlSingleBRDF, material_plugin_path)
         my_material_plugin[:diffuse] = VRay::Color.new(0.95,0.95,0.95)
-        
       end
     
-      puts "V-Ray material '#{material_name}' with an additional VRayMtl layer created successfully."
-    end
+      if my_material_plugin
     
-
-    def self.color_to_vraycolor(color)
-      VRay::Color.new(color.red / 255.0, color.green / 255.0, color.blue / 255.0)
+        puts "V-Ray material '#{material_name}' created successfully."
+      else
+        puts "Failed to create V-Ray material '#{material_name}'."
+      end
     end
 
     
