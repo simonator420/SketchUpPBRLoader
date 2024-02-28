@@ -5,6 +5,8 @@ module Reawote
     @@subfolder_paths = []
     @@percentage = 1.0
     @@dialog = nil
+    @@load16Nrm_checked = false
+    @@loadDisp_checked = true
 
     def self.create_dialog
       options = {
@@ -20,6 +22,14 @@ module Reawote
       dialog.center
 
       dialog
+    end
+
+    def self.set_load16Nrm_state(state)
+      @@load16Nrm_checked = state == 'true'
+    end
+
+    def self.set_loadDisp_state(state)
+      @@loadDisp_checked = state == 'true'
     end
 
     def self.browse_folder
@@ -167,6 +177,35 @@ module Reawote
       model = context.model
       scene = context.scene
       renderer = context.renderer
+      valid_sub_subfolder_names = (1..16).map { |n| "#{n}K" }
+      selected_path = nil
+
+      @@subfolder_paths.each do |path|
+        last_part = path.split('/').last  # Get the last part of the path
+        if last_part.include?(material_name)
+          # Found the material-specific folder, now let's iterate its subdirectories
+          Dir.entries(path).each do |subdir|
+            next if subdir == '.' || subdir == '..'  # Skip current and parent directory listings
+            if valid_sub_subfolder_names.include?(subdir)
+              selected_path = File.join(path, subdir)  # Update selected_path with the valid subdirectory path
+              break  # Found a valid subdirectory, so we can stop looking further
+            end
+          end
+        end
+        break if selected_path  # If we've found our path, no need to continue
+      end
+
+      puts "Nasel jsem ji #{selected_path}"
+      @@mapID_list = []
+      Dir.entries(selected_path).each do |filename|
+        next if filename == '.' || filename == '..'
+        
+        full_path = File.join(selected_path, filename)
+        parts = filename.split('_')
+        mapID = parts[-2] if parts.length > 1
+        @@mapID_list << mapID 
+      end
+      puts "Map ID List for material #{material_name}: #{@@mapID_list.join(', ')}"
       
       # Ensure V-Ray for SketchUp is present
       unless scene && renderer
@@ -176,18 +215,115 @@ module Reawote
     
       # Define my_material_plugin here so it's accessible throughout the method
       my_material_plugin = nil
+      bitmap_buffer = nil
+      displacement = nil
       
       # Start a scene change transaction
       scene.change do
         # Create a new V-Ray material as a plugin in the scene
         material_plugin_path = "/#{material_name}"
         my_material_plugin = scene.create(:MtlSingleBRDF, material_plugin_path)
-        my_material_plugin[:diffuse] = VRay::Color.new(0.95,0.95,0.95)
+        vray_material_plugin_path = "/#{material_name}/VRay Mtl"
+        my_material_plugin[:brdf] = scene.create(:BRDFVRayMtl, vray_material_plugin_path)
+
+        # if @@mapID_list.include?("DISP") || @@mapID_list.include?("DISP16")
+        #   displacement_path = "/#{material_name}"
+        #   displacement = scene.create(:GeomDisplacedMesh, displacement_path)
+        #   # Additional logic for setting up displacement might be needed here
+        # end
+        
+        # puts "Diffuse color set to: #{my_material_plugin[:brdf][:diffuse]}"
       end
     
       if my_material_plugin
     
         puts "V-Ray material '#{material_name}' created successfully."
+
+        scene.change do
+          # Ensure the material plugin is still valid
+          if my_material_plugin && my_material_plugin[:brdf]
+
+            puts "            MEZERA              "
+            Dir.entries(selected_path).each do |filename|
+              next if filename == '.' || filename == '..'
+              
+              full_path = File.join(selected_path, filename)
+              parts = filename.split('_')
+              mapID = parts[-2] if parts.length > 1
+
+              bitmap_plugin_path = "/#{material_name}/VRay Mtl/Bitmap/Bitmap"
+              bitmap_buffer = scene.create(:BitmapBuffer, bitmap_plugin_path)
+              bitmap_buffer[:file] = full_path
+
+              texture_plugin_path = "/#{material_name}/VRay Mtl/#{mapID}"
+              texture_bitmap = scene.create(:TexBitmap, texture_plugin_path)
+              texture_bitmap[:bitmap] = bitmap_buffer
+            
+              if mapID == "COL"
+                my_material_plugin[:brdf][:diffuse] = texture_bitmap
+                my_material_plugin[:brdf][:diffuse_tex] = texture_bitmap
+              
+              elsif mapID == "GLOSS"
+                reflect_gloss_plugin_path = "/#{material_name}/VRay Mtl/reflect_glossiness"
+                tex_combine = scene.create(:TexCombineFloat, reflect_gloss_plugin_path)
+                tex_combine[:texture] = texture_bitmap
+                
+                my_material_plugin[:brdf][:reflect_glossiness] = tex_combine
+                my_material_plugin[:brdf][:reflect_glossiness_tex] = texture_bitmap
+                my_material_plugin[:brdf][:reflect_color] = VRay::Color.new(1.0, 1.0, 1.0)
+
+              elsif mapID == "NRM" && (!@@load16Nrm_checked || !@@mapID_list.include?("NRM16"))
+                my_material_plugin[:brdf][:bump_map] = texture_bitmap
+                my_material_plugin[:brdf][:bump_map_tex] = texture_bitmap
+                my_material_plugin[:brdf][:bump_type] = 1
+              
+              elsif mapID == "NRM16" && @@load16Nrm_checked
+                my_material_plugin[:brdf][:bump_map] = texture_bitmap
+                my_material_plugin[:brdf][:bump_map_tex] = texture_bitmap
+                my_material_plugin[:brdf][:bump_type] = 1
+              
+              elsif mapID == "DISP" && @@loadDisp_checked
+                displacement_path = "/#{material_name}"
+                displacement = scene.create(:GeomDisplacedMesh, displacement_path)
+
+                disp_bitmap_path = "/#{material_name}/Bitmap/Bitmap"
+                disp_bitmap = scene.create(:BitmapBuffer, disp_bitmap_path)
+                disp_bitmap[:file] = full_path
+
+                disp_path = "/#{material_name}/Bitmap"
+                disp_texture = scene.create(:TexBitmap, disp_path)
+                disp_texture[:bitmap] = disp_bitmap
+
+                displacement[:displacement_amount] = 0.1
+                displacement[:displacement_tex_color] = disp_texture
+
+              elsif mapID == "DISP16" && @@loadDisp_checked
+                displacement_path = "/#{material_name}"
+                displacement = scene.create(:GeomDisplacedMesh, displacement_path)
+                
+                disp_bitmap_path = "/#{material_name}/Bitmap/Bitmap"
+                disp_bitmap = scene.create(:BitmapBuffer, disp_bitmap_path)
+                disp_bitmap[:file] = full_path
+
+                disp_path = "/#{material_name}/Bitmap"
+                disp_texture = scene.create(:TexBitmap, disp_path)
+                disp_texture[:bitmap] = disp_bitmap
+
+                displacement[:displacement_amount] = 0.1
+                displacement[:displacement_tex_color] = disp_texture
+
+              end
+            end
+            puts "            MEZERA              "
+
+            # Set reflection glossiness and color
+            # my_material_plugin[:brdf][:reflect_glossiness] = 0.85
+            # my_material_plugin[:brdf][:reflect_color] = VRay::Color.new(1.0, 0.0, 0.0)
+
+            # my_material_plugin[:brdf][:diffuse_color] = VRay::Color.new(1.0, 0.0, 0.0)
+          end
+        end
+
       else
         puts "Failed to create V-Ray material '#{material_name}'."
       end
@@ -217,7 +353,15 @@ module Reawote
 
       @@dialog.add_action_callback("createVrayMaterial") { |action_context, subfolder_name|
         create_vray_material(subfolder_name)
-      } 
+      }
+
+      @@dialog.add_action_callback("setLoad16NrmState") do |action_context, state|
+        set_load16Nrm_state(state)
+      end
+
+      @@dialog.add_action_callback("setLoadDispState") do |action_context, state|
+        set_loadDisp_state(state)
+      end
 
       @@dialog.add_action_callback("subfolderSelected") { |action_context, subfolder_name, index|
         if index >= 0 && index < @@subfolder_paths.length

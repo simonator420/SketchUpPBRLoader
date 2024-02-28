@@ -105,8 +105,10 @@
     }
 
     function loadMaterials() {
-
-      // Iterate over selected subfolders and create V-Ray materials
+      var load16NrmState = document.getElementById('load16Nrm').checked;
+      var loadDispState = document.getElementById('loadDisp').checked;
+      sketchup.setLoad16NrmState(load16NrmState.toString());
+      sketchup.setLoadDispState(loadDispState.toString());
       document.querySelectorAll('#subfolderList .checkbox-row input[type="checkbox"]').forEach(function(checkbox) {
         if (checkbox.checked) {
           var subfolderName = checkbox.id; // assuming the checkbox id is the subfolder name
