@@ -6,7 +6,8 @@ module Reawote
     @@percentage = 1.0
     @@dialog = nil
     @@load16Nrm_checked = false
-    @@loadDisp_checked = true
+    @@loadDisp_checked = false
+    @@load16Disp_checked = false
 
     def self.create_dialog
       options = {
@@ -30,6 +31,10 @@ module Reawote
 
     def self.set_loadDisp_state(state)
       @@loadDisp_checked = state == 'true'
+    end
+
+    def self.set_load16Disp_state(state)
+      @@load16Disp_checked = state == 'true'
     end
 
     def self.browse_folder
@@ -271,6 +276,35 @@ module Reawote
                 my_material_plugin[:brdf][:reflect_glossiness] = tex_combine
                 my_material_plugin[:brdf][:reflect_glossiness_tex] = texture_bitmap
                 my_material_plugin[:brdf][:reflect_color] = VRay::Color.new(1.0, 1.0, 1.0)
+              
+              elsif mapID == "METAL"
+                metalness_plugin_path = "/#{material_name}/VRay Mtl/metalness"
+                tex_combine = scene.create(:TexCombineFloat, metalness_plugin_path)
+                tex_combine[:texture] = texture_bitmap
+
+                my_material_plugin[:brdf][:metalness] = tex_combine
+                my_material_plugin[:brdf][:metalness_tex] = texture_bitmap
+              
+              elsif mapID == "OPAC"
+                opacity_plugin_path = "/#{material_name}/VRay Mtl/opacity"
+                tex_combine = scene.create(:TexCombineFloat, opacity_plugin_path)
+                tex_combine[:texture] = texture_bitmap
+
+                my_material_plugin[:brdf][:opacity] = tex_combine
+                my_material_plugin[:brdf][:opacity_tex] = texture_bitmap
+              
+              elsif mapID == "SSS"
+                my_material_plugin[:brdf][:translucency_color] = texture_bitmap
+                my_material_plugin[:brdf][:translucency_color_tex] = texture_bitmap
+                my_material_plugin[:brdf][:translucency] = 6
+              
+              elsif mapID == "SHEENGLOSS"
+                sheengloss_plugin_path = "/#{material_name}/VRay Mtl/sheen_glossiness"
+                tex_combine = scene.create(:TexCombineFloat, sheengloss_plugin_path)
+                tex_combine[:texture] = texture_bitmap
+
+                my_material_plugin[:brdf][:sheen_glossiness_tex] = texture_bitmap
+                my_material_plugin[:brdf][:sheen_glossiness] = tex_combine
 
               elsif mapID == "NRM" && (!@@load16Nrm_checked || !@@mapID_list.include?("NRM16"))
                 my_material_plugin[:brdf][:bump_map] = texture_bitmap
@@ -282,7 +316,7 @@ module Reawote
                 my_material_plugin[:brdf][:bump_map_tex] = texture_bitmap
                 my_material_plugin[:brdf][:bump_type] = 1
               
-              elsif mapID == "DISP" && @@loadDisp_checked
+              elsif mapID == "DISP" && @@loadDisp_checked && (!@@load16Disp_checked || !@@mapID_list.include?("DISP16"))
                 displacement_path = "/#{material_name}"
                 displacement = scene.create(:GeomDisplacedMesh, displacement_path)
 
@@ -297,7 +331,7 @@ module Reawote
                 displacement[:displacement_amount] = 0.1
                 displacement[:displacement_tex_color] = disp_texture
 
-              elsif mapID == "DISP16" && @@loadDisp_checked
+              elsif mapID == "DISP16" && @@loadDisp_checked && @@load16Disp_checked
                 displacement_path = "/#{material_name}"
                 displacement = scene.create(:GeomDisplacedMesh, displacement_path)
                 
@@ -361,6 +395,10 @@ module Reawote
 
       @@dialog.add_action_callback("setLoadDispState") do |action_context, state|
         set_loadDisp_state(state)
+      end
+
+      @@dialog.add_action_callback("setLoad16DispState") do |action_context, state|
+        set_load16Disp_state(state)
       end
 
       @@dialog.add_action_callback("subfolderSelected") { |action_context, subfolder_name, index|

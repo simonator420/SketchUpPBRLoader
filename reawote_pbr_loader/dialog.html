@@ -107,8 +107,10 @@
     function loadMaterials() {
       var load16NrmState = document.getElementById('load16Nrm').checked;
       var loadDispState = document.getElementById('loadDisp').checked;
+      var load16DispState = document.getElementById('load16Disp').checked;
       sketchup.setLoad16NrmState(load16NrmState.toString());
       sketchup.setLoadDispState(loadDispState.toString());
+      sketchup.setLoad16DispState(load16DispState.toString());
       document.querySelectorAll('#subfolderList .checkbox-row input[type="checkbox"]').forEach(function(checkbox) {
         if (checkbox.checked) {
           var subfolderName = checkbox.id; // assuming the checkbox id is the subfolder name
