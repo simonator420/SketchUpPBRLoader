@@ -8,6 +8,7 @@ module Reawote
     @@load16Nrm_checked = false
     @@loadDisp_checked = false
     @@load16Disp_checked = false
+    @@loadAO_checked = false
 
     def self.create_dialog
       options = {
@@ -35,6 +36,10 @@ module Reawote
 
     def self.set_load16Disp_state(state)
       @@load16Disp_checked = state == 'true'
+    end
+
+    def self.set_loadAO_state(state)
+      @@loadAO_checked = state == 'true'
     end
 
     def self.browse_folder
@@ -184,6 +189,7 @@ module Reawote
       renderer = context.renderer
       valid_sub_subfolder_names = (1..16).map { |n| "#{n}K" }
       selected_path = nil
+      @@mix_operator_loaded = false
 
       @@subfolder_paths.each do |path|
         last_part = path.split('/').last  # Get the last part of the path
@@ -222,6 +228,7 @@ module Reawote
       my_material_plugin = nil
       bitmap_buffer = nil
       displacement = nil
+      mix_operator = nil
       
       # Start a scene change transaction
       scene.change do
@@ -265,9 +272,58 @@ module Reawote
               texture_bitmap[:bitmap] = bitmap_buffer
             
               if mapID == "COL"
-                my_material_plugin[:brdf][:diffuse] = texture_bitmap
-                my_material_plugin[:brdf][:diffuse_tex] = texture_bitmap
+                if !@@loadAO_checked || !@@mapID_list.include?("AO")
+                  my_material_plugin[:brdf][:diffuse] = texture_bitmap
+                  my_material_plugin[:brdf][:diffuse_tex] = texture_bitmap
+                else
+                  if !@@mix_operator_loaded
+                    mix_operator_path = "/#{material_name}/VRay Mtl/Mix (Operator)"
+                    mix_operator = scene.create(:TexCompMax, mix_operator_path)
+                    mix_operator[:operator] = 3
+                    @@mix_operator_loaded = true
+
+                    my_material_plugin[:brdf][:diffuse_tex] = mix_operator
+                    my_material_plugin[:brdf][:diffuse] = mix_operator
+                  end
+                  
+                  if @@mix_operator_loaded
+                    bitmap_plugin_path = "/#{material_name}/VRay Mtl/Mix (Operator)/Bitmap/Bitmap"
+                    bitmap_buffer = scene.create(:BitmapBuffer, bitmap_plugin_path)
+                    bitmap_buffer[:file] = full_path
+
+                    source_a_tex_path = "/#{material_name}/VRay Mtl/Mix (Operator)/#{mapID}"
+                    source_a_tex = scene.create(:TexBitmap, source_a_tex_path)
+                    source_a_tex[:bitmap] = bitmap_buffer
+
+                    mix_operator[:sourceA_tex] = source_a_tex
+                    mix_operator[:sourceA] =  source_a_tex
+                  end
+                end
               
+              elsif mapID == "AO" && @@loadAO_checked
+                if !@@mix_operator_loaded
+                  mix_operator_path = "/#{material_name}/VRay Mtl/Mix (Operator)"
+                  mix_operator = scene.create(:TexCompMax, mix_operator_path)
+                  mix_operator[:operator] = 3
+                  @@mix_operator_loaded = true
+
+                  my_material_plugin[:brdf][:diffuse_tex] = mix_operator
+                  my_material_plugin[:brdf][:diffuse] = mix_operator
+                end
+                
+                if @@mix_operator_loaded
+                  bitmap_plugin_path = "/#{material_name}/VRay Mtl/Mix (Operator)/Bitmap#1/Bitmap"
+                  bitmap_buffer = scene.create(:BitmapBuffer, bitmap_plugin_path)
+                  bitmap_buffer[:file] = full_path
+                  
+                  source_b_tex_path = "/#{material_name}/VRay Mtl/Mix (Operator)/#{mapID}"
+                  source_b_tex = scene.create(:TexBitmap, source_b_tex_path)
+                  source_b_tex[:bitmap] = bitmap_buffer
+
+                  mix_operator[:sourceB] =  source_b_tex
+                  mix_operator[:sourceB_tex] =  source_b_tex
+                end
+
               elsif mapID == "GLOSS"
                 reflect_gloss_plugin_path = "/#{material_name}/VRay Mtl/reflect_glossiness"
                 tex_combine = scene.create(:TexCombineFloat, reflect_gloss_plugin_path)
@@ -317,7 +373,7 @@ module Reawote
                 my_material_plugin[:brdf][:bump_type] = 1
               
               elsif mapID == "DISP" && @@loadDisp_checked && (!@@load16Disp_checked || !@@mapID_list.include?("DISP16"))
-                displacement_path = "/#{material_name}"
+                displacement_path = "/#{material_name}_DISP"
                 displacement = scene.create(:GeomDisplacedMesh, displacement_path)
 
                 disp_bitmap_path = "/#{material_name}/Bitmap/Bitmap"
@@ -332,7 +388,7 @@ module Reawote
                 displacement[:displacement_tex_color] = disp_texture
 
               elsif mapID == "DISP16" && @@loadDisp_checked && @@load16Disp_checked
-                displacement_path = "/#{material_name}"
+                displacement_path = "/#{material_name}_DISP"
                 displacement = scene.create(:GeomDisplacedMesh, displacement_path)
                 
                 disp_bitmap_path = "/#{material_name}/Bitmap/Bitmap"
@@ -399,6 +455,10 @@ module Reawote
 
       @@dialog.add_action_callback("setLoad16DispState") do |action_context, state|
         set_load16Disp_state(state)
+      end
+
+      @@dialog.add_action_callback("setLoadAOState") do |action_context, state|
+        set_loadAO_state(state)
       end
 
       @@dialog.add_action_callback("subfolderSelected") { |action_context, subfolder_name, index|
