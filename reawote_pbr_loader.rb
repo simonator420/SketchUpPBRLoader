@@ -15,7 +15,7 @@ module Reawote
     EXTENSION.creator = 'Reawote'
     EXTENSION.description = 'Importing PBR materials from Reawote library.'
     EXTENSION.version = '1.0.0'
-    EXTENSION.copyright = "#{EXTENSION.creator} 2024"
+    EXTENSION.copyright = "Real World Textures s.r.o. 2024"
     Sketchup.register_extension(EXTENSION, true)
   end
 end

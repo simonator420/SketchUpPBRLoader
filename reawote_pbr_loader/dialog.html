@@ -115,7 +115,7 @@
       sketchup.setLoadAOState(loadAOState.toString());
       document.querySelectorAll('#subfolderList .checkbox-row input[type="checkbox"]').forEach(function(checkbox) {
         if (checkbox.checked) {
-          var subfolderName = checkbox.id; // assuming the checkbox id is the subfolder name
+          var subfolderName = checkbox.id;
           sketchup.createVrayMaterial(subfolderName);
         }
       });

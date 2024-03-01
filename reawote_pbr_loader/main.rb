@@ -63,7 +63,6 @@ module Reawote
           File.directory?(File.join(selected_folder, entry)) && !(entry =='.' || entry == '..') 
         }.sort
         
-        # Define the valid sub-subfolder names
         valid_sub_subfolder_names = (1..16).map { |n| "#{n}K" }
         
         formatted_subfolders = subfolders.map do |folder_name|
@@ -74,40 +73,37 @@ module Reawote
             folder_name
           end
     
-          # Check if the subfolder has at least one valid sub-subfolder
           sub_subfolders = Dir.entries(File.join(selected_folder, folder_name)).select { |entry| 
             File.directory?(File.join(selected_folder, folder_name, entry)) && !(entry =='.' || entry == '..') 
           }
           
           if sub_subfolders.any? { |sub_subfolder| valid_sub_subfolder_names.include?(sub_subfolder) }
-            # Add the full path of the subfolder to @@subfolder_paths if valid
+
             full_path = File.join(selected_folder, folder_name)
             @@subfolder_paths << full_path
     
             formatted_name
           else
-            nil  # Exclude the subfolder if it doesn't have a valid sub-subfolder
+            nil
           end
-        end.compact  # Remove nil elements from the array
+        end.compact
     
-        # Print and execute script only if formatted_subfolders is not empty
         if formatted_subfolders.any?
-          puts "Formatted Subfolders: #{formatted_subfolders}"
+          # puts "Formatted Subfolders: #{formatted_subfolders}"
           @@dialog.execute_script("addFolderToSubfolderList(#{formatted_subfolders.to_json})")
         else
-          UI.messagebox("No Reawote materials were found in the selected folder: #{selected_folder}")
+          UI.messagebox("No Reawote materials were found in selected path: #{selected_folder}")
         end
       end
     end       
     
 
     def self.list_subfolders(path)
-      @@subfolder_paths.clear # Clear previous paths
+      @@subfolder_paths.clear
       subfolders = Dir.entries(path).select { |entry| 
         File.directory?(File.join(path, entry)) && !(entry =='.' || entry == '..') 
       }.sort
     
-      # Define the valid sub-subfolder names
       valid_sub_subfolder_names = (1..16).map { |n| "#{n}K" }
     
       formatted_subfolders = subfolders.map do |folder_name|
@@ -124,21 +120,20 @@ module Reawote
         }
     
         if sub_subfolders.any? { |sub_subfolder| valid_sub_subfolder_names.include?(sub_subfolder) }
-          # Add the full path of the subfolder to @@subfolder_paths if valid
+
           @@subfolder_paths << File.join(path, folder_name)
     
           formatted_name
         else
-          nil  # Exclude the subfolder if it doesn't have a valid sub-subfolder
+          nil
         end
       end.compact  # Remove nil elements from the array
     
       # Print and execute script only if formatted_subfolders is not empty
       if formatted_subfolders.any?
-        puts "Formatted Subfolders: #{formatted_subfolders}"
         @@dialog.execute_script("populateSubfolderList(#{formatted_subfolders.to_json})")
       else
-        UI.messagebox("No Reawote materials were found in the selected folder: #{path}")
+        UI.messagebox("No Reawote materials were found in selected path: #{path}")
       end
     end
         
@@ -156,7 +151,6 @@ module Reawote
           folder_name
         end
     
-        # Add the full path of the subfolder to @@subfolder_paths
         full_path = File.join(path, folder_name)
         @@subfolder_paths << full_path
     
@@ -182,7 +176,6 @@ module Reawote
     end
 
     def self.create_vray_material(material_name)
-      # Initialize the V-Ray context
       context = VRay::Context.active
       model = context.model
       scene = context.scene
@@ -192,9 +185,8 @@ module Reawote
       @@mix_operator_loaded = false
 
       @@subfolder_paths.each do |path|
-        last_part = path.split('/').last  # Get the last part of the path
+        last_part = path.split('/').last
         if last_part.include?(material_name)
-          # Found the material-specific folder, now let's iterate its subdirectories
           Dir.entries(path).each do |subdir|
             next if subdir == '.' || subdir == '..'  # Skip current and parent directory listings
             if valid_sub_subfolder_names.include?(subdir)
@@ -206,7 +198,6 @@ module Reawote
         break if selected_path  # If we've found our path, no need to continue
       end
 
-      puts "Nasel jsem ji #{selected_path}"
       @@mapID_list = []
       Dir.entries(selected_path).each do |filename|
         next if filename == '.' || filename == '..'
@@ -216,7 +207,7 @@ module Reawote
         mapID = parts[-2] if parts.length > 1
         @@mapID_list << mapID 
       end
-      puts "Map ID List for material #{material_name}: #{@@mapID_list.join(', ')}"
+      # puts "Map ID List for material #{material_name}: #{@@mapID_list.join(', ')}"
       
       # Ensure V-Ray for SketchUp is present
       unless scene && renderer
@@ -224,13 +215,11 @@ module Reawote
         return
       end
     
-      # Define my_material_plugin here so it's accessible throughout the method
       my_material_plugin = nil
       bitmap_buffer = nil
       displacement = nil
       mix_operator = nil
       
-      # Start a scene change transaction
       scene.change do
         # Create a new V-Ray material as a plugin in the scene
         material_plugin_path = "/#{material_name}"
@@ -252,10 +241,10 @@ module Reawote
         puts "V-Ray material '#{material_name}' created successfully."
 
         scene.change do
-          # Ensure the material plugin is still valid
+
           if my_material_plugin && my_material_plugin[:brdf]
 
-            puts "            MEZERA              "
+
             Dir.entries(selected_path).each do |filename|
               next if filename == '.' || filename == '..'
               
@@ -404,13 +393,6 @@ module Reawote
 
               end
             end
-            puts "            MEZERA              "
-
-            # Set reflection glossiness and color
-            # my_material_plugin[:brdf][:reflect_glossiness] = 0.85
-            # my_material_plugin[:brdf][:reflect_color] = VRay::Color.new(1.0, 0.0, 0.0)
-
-            # my_material_plugin[:brdf][:diffuse_color] = VRay::Color.new(1.0, 0.0, 0.0)
           end
         end
 
@@ -464,7 +446,7 @@ module Reawote
       @@dialog.add_action_callback("subfolderSelected") { |action_context, subfolder_name, index|
         if index >= 0 && index < @@subfolder_paths.length
           selected_path = @@subfolder_paths[index]
-          puts "Selected Path: #{selected_path}"
+          # puts "Selected Path: #{selected_path}"
 
           if File.directory?(selected_path)
             begin
@@ -488,17 +470,17 @@ module Reawote
                   # UI.messagebox("Found target file: #{full_target_file_path}")
                 
                 else
-                  UI.messagebox("Didnt found target file in: #{preview_subfolder_path}")
+                  puts "Didnt found target file in: #{preview_subfolder_path}"
                 end
               end
             rescue => e
-              UI.messagebox("Failed to list directory contents: #{e.message}")
+              puts "Failed to list directory contents: #{e.message}"
             end
           else
-            UI.messagebox("Directory does not exist: #{selected_path}")
+            puts "Directory does not exist: #{selected_path}"
           end
         else
-          UI.messagebox("No match found for subfolder: #{subfolder_name}, Index: #{index}")
+          puts "No match found for subfolder: #{subfolder_name}, Index: #{index}"
         end
       }
 
