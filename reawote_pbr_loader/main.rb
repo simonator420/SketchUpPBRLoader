@@ -317,6 +317,9 @@ module Reawote
                 reflect_gloss_plugin_path = "/#{material_name}/VRay Mtl/reflect_glossiness"
                 tex_combine = scene.create(:TexCombineFloat, reflect_gloss_plugin_path)
                 tex_combine[:texture] = texture_bitmap
+
+                bitmap_buffer[:transfer_function] = 1
+                bitmap_buffer[:gamma] = 0.7
                 
                 my_material_plugin[:brdf][:reflect_glossiness] = tex_combine
                 my_material_plugin[:brdf][:reflect_glossiness_tex] = texture_bitmap
@@ -326,6 +329,9 @@ module Reawote
                 metalness_plugin_path = "/#{material_name}/VRay Mtl/metalness"
                 tex_combine = scene.create(:TexCombineFloat, metalness_plugin_path)
                 tex_combine[:texture] = texture_bitmap
+
+                bitmap_buffer[:transfer_function] = 1
+                bitmap_buffer[:gamma] = 0.7
 
                 my_material_plugin[:brdf][:metalness] = tex_combine
                 my_material_plugin[:brdf][:metalness_tex] = texture_bitmap
@@ -352,11 +358,14 @@ module Reawote
                 my_material_plugin[:brdf][:sheen_glossiness] = tex_combine
 
               elsif mapID == "NRM" && (!@@load16Nrm_checked || !@@mapID_list.include?("NRM16"))
+                bitmap_buffer[:transfer_function] = 0
                 my_material_plugin[:brdf][:bump_map] = texture_bitmap
                 my_material_plugin[:brdf][:bump_map_tex] = texture_bitmap
                 my_material_plugin[:brdf][:bump_type] = 1
               
               elsif mapID == "NRM16" && @@load16Nrm_checked
+
+                bitmap_buffer[:transfer_function] = 0
                 my_material_plugin[:brdf][:bump_map] = texture_bitmap
                 my_material_plugin[:brdf][:bump_map_tex] = texture_bitmap
                 my_material_plugin[:brdf][:bump_type] = 1
@@ -368,6 +377,7 @@ module Reawote
                 disp_bitmap_path = "/#{material_name}/Bitmap/Bitmap"
                 disp_bitmap = scene.create(:BitmapBuffer, disp_bitmap_path)
                 disp_bitmap[:file] = full_path
+                disp_bitmap[:transfer_function] = 0
 
                 disp_path = "/#{material_name}/Bitmap"
                 disp_texture = scene.create(:TexBitmap, disp_path)
@@ -383,6 +393,7 @@ module Reawote
                 disp_bitmap_path = "/#{material_name}/Bitmap/Bitmap"
                 disp_bitmap = scene.create(:BitmapBuffer, disp_bitmap_path)
                 disp_bitmap[:file] = full_path
+                disp_bitmap[:transfer_function] = 0
 
                 disp_path = "/#{material_name}/Bitmap"
                 disp_texture = scene.create(:TexBitmap, disp_path)
