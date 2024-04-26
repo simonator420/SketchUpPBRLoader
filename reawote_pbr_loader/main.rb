@@ -53,6 +53,46 @@ module Reawote
       end
     end
 
+    def self.browse_model
+      # User selects a directory
+      selected_model_folder = UI.select_directory(title: "Select a Model Folder")
+      if selected_model_folder
+        # Search for SketchUp files in the selected directory
+        skp_files = Dir.glob(File.join(selected_model_folder, "*.skp"))
+    
+        # Prepare a message about the selection and found SketchUp files
+        message = "Selected Model Folder: #{selected_model_folder}\n"
+        if skp_files.empty?
+          UI.messagebox("No SketchUp documents found in the selected folder.")
+        else
+          first_skp_file = skp_files.first
+          # message += "Importing SketchUp document: #{File.basename(first_skp_file)}"
+          # UI.messagebox(message)
+          
+          model = Sketchup.active_model
+          definitions = model.definitions
+          begin
+            model.start_operation('Import SKP', true)
+            componentdefinition = definitions.load(first_skp_file)
+            if componentdefinition
+              instance = model.active_entities.add_instance(componentdefinition, IDENTITY)
+              @@dialog.close
+            else
+              UI.messagebox("Failed to import file.")
+            end
+          rescue => e
+            UI.messagebox("Error importing file: #{e.message}")
+          ensure
+            model.commit_operation
+          end
+        end
+      else
+        UI.messagebox("No folder selected.")
+      end
+    end
+    
+       
+
     def self.browse_new_folder
       selected_folder = UI.select_directory(title: "Select a New Folder to Add to Queue")
       if selected_folder
@@ -416,6 +456,10 @@ module Reawote
     def self.add_callbacks
       @@dialog.add_action_callback("browseFolder") { |action_context|
         browse_folder
+      }
+
+      @@dialog.add_action_callback("browseModel") {
+        browse_model
       }
 
       @@dialog.add_action_callback("listSubfolders") { |action_context, path|

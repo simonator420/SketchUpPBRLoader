@@ -6,6 +6,10 @@
       sketchup.browseFolder();
     }
 
+    function browseModel() {
+      sketchup.browseModel();
+    }
+
     function selectNewFolder() {
       sketchup.browseNewFolder();
     }
@@ -21,6 +25,7 @@
       });
 
       document.querySelector('button[onclick="onClickButton()"]').disabled = true;
+      document.querySelector('button[onclick="browseModel()"]').disabled = true;
 
       document.getElementById('loadAO').checked = true;
       document.getElementById('loadDisp').checked = true;
@@ -222,9 +227,19 @@
       <label>Material Folder:</label>
     </div>
     <div class="input">
-      <button onclick="onClickButton()">Browse</button>
+      <button onclick="onClickButton()">Browse Material</button>
     </div>
   </div>
+
+  <div class="row">
+    <div class="label">
+      <label>Model Folder:</label>
+    </div>
+    <div class="input">
+      <button onclick="browseModel()">Browse Model</button>
+    </div>
+  </div>
+  
 
   <!-- <div class="row">
     <div class="label">
