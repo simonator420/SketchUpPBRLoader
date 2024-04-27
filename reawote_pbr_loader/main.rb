@@ -75,8 +75,14 @@ module Reawote
             model.start_operation('Import SKP', true)
             componentdefinition = definitions.load(first_skp_file)
             if componentdefinition
-              instance = model.active_entities.add_instance(componentdefinition, IDENTITY)
-              @@dialog.close
+              context = VRay::Context.active
+              model = context.model
+              scene = context.scene
+              renderer = context.renderer
+              scene.change do
+                instance = model.active_entities.add_instance(componentdefinition, IDENTITY)
+                @@dialog.close
+              end
             else
               UI.messagebox("Failed to import file.")
             end
