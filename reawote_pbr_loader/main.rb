@@ -88,7 +88,41 @@ module Reawote
             componentdefinition = definitions.load(skp_file)
             if componentdefinition
               instance = model.active_entities.add_instance(componentdefinition, IDENTITY)
-              update_vrmesh(instance, vrmesh_file, file_name)
+              
+              context = VRay::Context.active
+              model = context.model
+              scene = context.scene
+              renderer = context.renderer
+        
+              scene.change do
+                vrmesh_path = "/#{file_name}"
+                vrmesh = scene["/#{file_name}"]
+                vrmesh[:file] = vrmesh_file
+                puts "Tohle je vrmesh: #{vrmesh}"
+                puts ""
+                materials = model.materials
+                for material in materials
+                  material_name = material.name
+                  if material_name.include?(file_name)
+                    material_plugin_path = "/#{material_name}"
+                    material_plugin = scene[material_plugin_path]
+
+                    diffuse_tex = scene["/#{material_name}/Base/VRayBRDF/diffuseTexBitmap/BitmapBuffer"]
+                    if diffuse_tex
+                      diffuse_tex_file_name = diffuse_tex[:file]
+                      separator = diffuse_tex_file_name.include?('\\') ? '\\' : '/'
+                      path_parts = diffuse_tex_file_name.split(separator)
+                      diffuse_tex_base = path_parts[-1]
+                      matching_files = Dir.glob(File.join(selected_model_folder, "**", "*#{diffuse_tex_base}"))
+                      diffuse_tex_path = matching_files.first
+                      diffuse_tex[:file] = diffuse_tex_path
+                    end
+                    
+                    puts "Tohle je material: #{material.name}"
+                  end
+                end
+              end
+              
               @@dialog.close
             else
               UI.messagebox("Failed to import file.")
@@ -104,19 +138,26 @@ module Reawote
       end
     end
     
-    def self.update_vrmesh(instance, vrmesh_file, file_name)
-      context = VRay::Context.active
-      model = context.model
-      scene = context.scene
-      renderer = context.renderer
+    # def self.update_vrmesh(instance, vrmesh_file, file_name)
+    #   context = VRay::Context.active
+    #   model = context.model
+    #   scene = context.scene
+    #   renderer = context.renderer
 
-      scene.change do
-        vrmesh_path = "/#{file_name}"
-        vrmesh = scene["/#{file_name}"]
-        vrmesh[:file] = vrmesh_file
-        puts "Tohle je vrmesh: #{vrmesh}"
-      end
-    end
+    #   scene.change do
+    #     vrmesh_path = "/#{file_name}"
+    #     vrmesh = scene["/#{file_name}"]
+    #     vrmesh[:file] = vrmesh_file
+    #     puts "Tohle je vrmesh: #{vrmesh}"
+    #     puts ""
+    #     materials = model.materials
+    #     for material in materials
+    #       if material.name.include?(file_name)
+    #         puts "Tohle je material: #{material.name}"
+    #       end
+    #     end
+    #   end
+    # end
 
 
     def self.browse_new_folder
@@ -321,6 +362,8 @@ module Reawote
               bitmap_plugin_path = "/#{material_name}/VRay Mtl/Bitmap/Bitmap"
               bitmap_buffer = scene.create(:BitmapBuffer, bitmap_plugin_path)
               bitmap_buffer[:file] = full_path
+              nalezena = bitmap_buffer[:file]
+              puts "Tohle je cesta kterou jsem nalezl: #{nalezena}"
 
               texture_plugin_path = "/#{material_name}/VRay Mtl/#{mapID}"
               texture_bitmap = scene.create(:TexBitmap, texture_plugin_path)
