@@ -117,7 +117,40 @@ module Reawote
                       diffuse_tex_path = matching_files.first
                       diffuse_tex[:file] = diffuse_tex_path
                     end
-                    
+
+                    glossiness_tex = scene["/#{material_name}/Base/VRayBRDF/reflectionGlossinessTexBitmap/BitmapBuffer"]
+                    if glossiness_tex
+                      glossiness_tex_file_name = glossiness_tex[:file]
+                      separator = glossiness_tex_file_name.include?('\\') ? '\\' : '/'
+                      path_parts = glossiness_tex_file_name.split(separator)
+                      glossiness_tex_base = path_parts[-1]
+                      matching_files = Dir.glob(File.join(selected_model_folder, "**", "*#{glossiness_tex_base}"))
+                      glossiness_tex_path = matching_files.first
+                      glossiness_tex[:file] = glossiness_tex_path
+                    end
+
+                    bump_tex = scene["/#{material_name}/Bump/bumpTexBitmap/BitmapBuffer"]
+                    if bump_tex
+                      bump_tex_file_name = bump_tex[:file]
+                      separator = bump_tex_file_name.include?('\\') ? '\\' : '/'
+                      path_parts = bump_tex_file_name.split(separator)
+                      bump_tex_base = path_parts[-1]
+                      matching_files = Dir.glob(File.join(selected_model_folder, "**", "*#{bump_tex_base}"))
+                      bump_tex_path = matching_files.first
+                      bump_tex[:file] = bump_tex_path
+                    end
+
+                    displacement_tex = scene["/#{material_name}/displacementTexBitmap/BitmapBuffer"]
+                    if displacement_tex
+                      displacement_tex_file_name = displacement_tex[:file]
+                      separator = displacement_tex_file_name.include?('\\') ? '\\' : '/'
+                      path_parts = displacement_tex_file_name.split(separator)
+                      displacement_tex_base = path_parts[-1]
+                      matching_files = Dir.glob(File.join(selected_model_folder, "**", "*#{displacement_tex_base}"))
+                      displacement_tex_path = matching_files.first
+                      displacement_tex[:file] = displacement_tex_path
+                    end
+
                     puts "Tohle je material: #{material.name}"
                   end
                 end
