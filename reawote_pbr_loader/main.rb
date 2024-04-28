@@ -54,35 +54,42 @@ module Reawote
     end
 
     def self.browse_model
+
       # User selects a directory
       selected_model_folder = UI.select_directory(title: "Select a Model Folder")
       if selected_model_folder
         # Search for SketchUp files in the selected directory
         skp_files = Dir.glob(File.join(selected_model_folder, "*.skp"))
+        vrmesh_files = Dir.glob(File.join(selected_model_folder, "*.vrmesh"))
     
         # Prepare a message about the selection and found SketchUp files
         message = "Selected Model Folder: #{selected_model_folder}\n"
         if skp_files.empty?
           UI.messagebox("No SketchUp documents found in the selected folder.")
+        elsif vrmesh_files.empty?
+          UI.messagebox("No VRMesh found found in the selected folder.")
         else
-          first_skp_file = skp_files.first
-          # message += "Importing SketchUp document: #{File.basename(first_skp_file)}"
+          skp_file = skp_files.first
+          puts "Path file for .skp file: #{skp_file}"
+
+          vrmesh_file = vrmesh_files.first
+          puts "Path file for .vrmesh file: #{vrmesh_file}"
+          
+          file_name = File.basename(vrmesh_file, ".*")
+          puts "File name: #{file_name}"
+
+          # message += "Importing SketchUp document: #{File.basename(skp_file)}"
           # UI.messagebox(message)
           
           model = Sketchup.active_model
           definitions = model.definitions
           begin
             model.start_operation('Import SKP', true)
-            componentdefinition = definitions.load(first_skp_file)
+            componentdefinition = definitions.load(skp_file)
             if componentdefinition
-              context = VRay::Context.active
-              model = context.model
-              scene = context.scene
-              renderer = context.renderer
-              scene.change do
-                instance = model.active_entities.add_instance(componentdefinition, IDENTITY)
-                @@dialog.close
-              end
+              instance = model.active_entities.add_instance(componentdefinition, IDENTITY)
+              update_vrmesh(instance, vrmesh_file, file_name)
+              @@dialog.close
             else
               UI.messagebox("Failed to import file.")
             end
@@ -97,7 +104,20 @@ module Reawote
       end
     end
     
-       
+    def self.update_vrmesh(instance, vrmesh_file, file_name)
+      context = VRay::Context.active
+      model = context.model
+      scene = context.scene
+      renderer = context.renderer
+
+      scene.change do
+        vrmesh_path = "/#{file_name}"
+        vrmesh = scene["/#{file_name}"]
+        vrmesh[:file] = vrmesh_file
+        puts "Tohle je vrmesh: #{vrmesh}"
+      end
+    end
+
 
     def self.browse_new_folder
       selected_folder = UI.select_directory(title: "Select a New Folder to Add to Queue")
