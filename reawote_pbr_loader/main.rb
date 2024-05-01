@@ -54,15 +54,11 @@ module Reawote
     end
 
     def self.browse_model
-
-      # User selects a directory
       selected_model_folder = UI.select_directory(title: "Select a Model Folder")
       if selected_model_folder
-        # Search for SketchUp files in the selected directory
         skp_files = Dir.glob(File.join(selected_model_folder, "*.skp"))
         vrmesh_files = Dir.glob(File.join(selected_model_folder, "*.vrmesh"))
     
-        # Prepare a message about the selection and found SketchUp files
         message = "Selected Model Folder: #{selected_model_folder}\n"
         if skp_files.empty?
           UI.messagebox("No SketchUp documents found in the selected folder.")
@@ -70,13 +66,8 @@ module Reawote
           UI.messagebox("No VRMesh found found in the selected folder.")
         else
           skp_file = skp_files.first
-          puts "Path file for .skp file: #{skp_file}"
-
           vrmesh_file = vrmesh_files.first
-          puts "Path file for .vrmesh file: #{vrmesh_file}"
-          
           file_name = File.basename(vrmesh_file, ".*")
-          puts "File name: #{file_name}"
 
           # message += "Importing SketchUp document: #{File.basename(skp_file)}"
           # UI.messagebox(message)
@@ -88,15 +79,19 @@ module Reawote
             componentdefinition = definitions.load(skp_file)
             if componentdefinition
               instance = model.active_entities.add_instance(componentdefinition, IDENTITY)
-              
+              puts "Tohle je instance #{instance}"
               context = VRay::Context.active
-              model = context.model
+              # defs = model.definitions
               scene = context.scene
               renderer = context.renderer
-        
               scene.change do
                 vrmesh_path = "/#{file_name}"
                 vrmesh = scene["/#{file_name}"]
+                unless vrmesh
+                  UI.messagebox("Please import the model before launching V-Ray. Restart SketchUp and import the model prior to opening any V-Ray interfaces.")
+                  model.abort_operation
+                  return
+                end
                 vrmesh[:file] = vrmesh_file
                 puts "Tohle je vrmesh: #{vrmesh}"
                 puts ""
@@ -170,7 +165,7 @@ module Reawote
         UI.messagebox("No folder selected.")
       end
     end
-    
+  
     # def self.update_vrmesh(instance, vrmesh_file, file_name)
     #   context = VRay::Context.active
     #   model = context.model
@@ -191,7 +186,6 @@ module Reawote
     #     end
     #   end
     # end
-
 
     def self.browse_new_folder
       selected_folder = UI.select_directory(title: "Select a New Folder to Add to Queue")
