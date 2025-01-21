@@ -41,6 +41,19 @@
       }
     }
 
+    function setButtonStates() {
+      document.getElementById('btnBrowseMaterial').disabled = false;
+      document.getElementById('btnBrowseModel').disabled = false;
+      document.getElementById('btnBrowseHDRI').disabled = false;
+      document.getElementById('btnLoadMaterials').disabled = true;
+      document.getElementById('btnLoadHdris').disabled = true;
+      document.getElementById('btnSelectAll').disabled = true;
+      document.getElementById('btnRefresh').disabled = true;
+      document.getElementById('btnAddToQueue').disabled = true;
+      document.getElementById('btnClean').disabled = true;
+      document.getElementById('folderPath').innerText = "";
+    }
+
     function enableCheckboxes() {
       document.querySelectorAll('input[type="checkbox"], button').forEach(element => {
         element.disabled = false;
@@ -297,7 +310,7 @@
       <label>Material Folder:</label>
     </div>
     <div class="input">
-      <button onclick="onClickButton()">Browse Materials</button>
+      <button id="btnBrowseMaterial" onclick="onClickButton()">Browse Materials</button>
     </div>
   </div>
 
@@ -306,7 +319,7 @@
       <label>Model Folder:</label>
     </div>
     <div class="input">
-      <button onclick="browseModel()">Browse Model</button>
+      <button id="btnBrowseModel" onclick="browseModel()">Browse Model</button>
     </div>
   </div>
 
@@ -315,7 +328,7 @@
       <label>HDRI Folder:</label>
     </div>
     <div class="input">
-      <button onclick="onHdriButton()">Browse HDRI</button>
+      <button id="btnBrowseHDRI" onclick="onHdriButton()">Browse HDRI</button>
     </div>
   </div>
   

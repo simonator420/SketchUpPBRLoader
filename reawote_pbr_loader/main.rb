@@ -382,7 +382,10 @@ module Reawote
         @@dialog.execute_script("populateSubfolderList(#{formatted_subfolders.to_json})")
         puts @@subfolder_paths
       else
-        UI.messagebox("No Reawote materials were found in selected path: #{path}")
+        if @@subfolder_paths.empty?
+          @@dialog.execute_script("setButtonStates(true);")
+          UI.messagebox("No Reawote materials were found in selected path: #{path}")
+        end
       end
     end
     
@@ -439,7 +442,10 @@ module Reawote
         @@dialog.execute_script("populateSubfolderList(#{formatted_subfolders.to_json})")
         puts @@subfolder_paths
       else
-        UI.messagebox("No Reawote materials were found in selected path: #{path}")
+        if @@subfolder_paths.empty?
+          @@dialog.execute_script("setButtonStates(true);")
+          UI.messagebox("No Reawote HDRIs were found in selected path: #{path}")
+        end
       end
     end 
 
