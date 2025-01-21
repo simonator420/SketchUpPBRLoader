@@ -125,6 +125,25 @@ module Reawote
       end
     end
 
+    def self.create_vray_hdri(hdri_name)
+      context = VRay::Context.active
+      model = context.model
+      scene = context.scene
+      renderer = context.renderer
+    
+      unless scene && renderer
+        UI.messagebox("V-Ray for SketchUp is not detected!")
+        return
+      end
+    
+      scene.change do
+        # Create a new V-Ray material as a plugin in the scene
+        hdri_plugin_path = "/#{hdri_name}"
+        my_hdri_plugin = scene.create(:LightDome, hdri_plugin_path)
+
+      end
+    end
+
     def self.import_model(skp_files, vrmesh_files, selected_model_folder)
       skp_file = skp_files.first
       model = Sketchup.active_model
@@ -827,6 +846,10 @@ module Reawote
 
       @@dialog.add_action_callback("createVrayMaterial") { |action_context, subfolder_name|
         create_vray_material(subfolder_name)
+      }
+
+      @@dialog.add_action_callback("createVrayHdri") { |action_context, subfolder_name|
+        create_vray_hdri(subfolder_name)
       }
 
       @@dialog.add_action_callback("setLoad16NrmState") do |action_context, state|

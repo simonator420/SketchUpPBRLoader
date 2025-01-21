@@ -209,6 +209,15 @@
       });
     }
 
+    function loadHdris() {
+      document.querySelectorAll('#subfolderList .checkbox-row input[type="checkbox"]').forEach(function(checkbox) {
+        if (checkbox.checked) {
+          var subfolderName = checkbox.id;
+          sketchup.createVrayHdri(subfolderName);
+        }
+      });
+    }
+
 
   </script>
   <style>
