@@ -16,7 +16,7 @@ module Reawote
         dialog_title: 'Reawote PBR Loader',
         preferences_key: 'com.example.ReawotePBRLoader',
         style: UI::HtmlDialog::STYLE_DIALOG,
-        height: 800,
+        height: 900,
         width: 500
       }
       dialog = UI::HtmlDialog.new(options)
@@ -851,8 +851,8 @@ module Reawote
 
           if File.directory?(selected_path)
             begin
-              preview_subfolder_name = Dir.entries(selected_path).find do |entry|
-                entry.downcase == 'preview' && File.directory?(File.join(selected_path, entry))
+              preview_subfolder_name ||= Dir.entries(selected_path).find do |entry|
+                entry.downcase.include?('preview') && File.directory?(File.join(selected_path, entry))
               end
 
               if preview_subfolder_name
@@ -861,6 +861,14 @@ module Reawote
                 target_file_name = Dir.entries(preview_subfolder_path).find do |entry|
                   base_name = File.basename(entry, ".*").downcase
                   (base_name.include?('fabric') || base_name.include?('sphere')) && File.file?(File.join(preview_subfolder_path, entry))
+                end
+
+                # If no 'fabric' or 'sphere' file is found, look for 'PLANE'
+                if target_file_name.nil?
+                  target_file_name = Dir.entries(preview_subfolder_path).find do |entry|
+                    base_name = File.basename(entry, ".*").downcase
+                    base_name.include?('plane') && File.file?(File.join(preview_subfolder_path, entry))
+                  end
                 end
 
                 if target_file_name
