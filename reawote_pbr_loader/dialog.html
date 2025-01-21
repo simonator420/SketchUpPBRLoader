@@ -17,7 +17,13 @@
     }
 
     function selectNewFolder() {
-      sketchup.browseNewFolder();
+      if (pathSelectedBy === "onClickButton") {
+        sketchup.browseNewFolder("onClickButton");
+      } else if (pathSelectedBy === "onHdriButton") {
+        sketchup.browseNewFolder("onHdriButton");
+      } else {
+        console.error("Error: Unknown source for selectNewFolder");
+      }
     }
 
     function updateFolderPath(path) {

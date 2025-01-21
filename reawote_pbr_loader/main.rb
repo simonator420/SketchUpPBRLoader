@@ -232,54 +232,94 @@ module Reawote
 
 
     # Allow the user to select a new folder to add to the initial selection queue, updating the dialog with subfolders if valid.
-    def self.browse_new_folder
+    def self.browse_new_folder(source)
       selected_folder = UI.select_directory(title: "Select a New Folder to Add to Queue")
       return unless selected_folder
     
       @@initial_selection << selected_folder
     
-      @@subfolder_paths ||= []
-      formatted_subfolders = []
-    
       valid_sub_subfolder_names = (1..16).map { |n| "#{n}K" }
-      
+      formatted_subfolders = []
+      hdr_condition_met = false
+    
       subfolders = Dir.entries(selected_folder).select do |entry|
         File.directory?(File.join(selected_folder, entry)) && !(entry == '.' || entry == '..')
       end.sort rescue []
     
       subfolders.each do |folder_name|
         parts = folder_name.split("_")
-        formatted_name = parts.count >= 3 ? "#{parts[0]}_#{parts[1]}_#{parts[2]}" : folder_name
+        formatted_name = if parts.count >= 3
+                           "#{parts[0]}_#{parts[1]}_#{parts[2]}"
+                         else
+                           folder_name
+                         end
     
         sub_subfolder_path = File.join(selected_folder, folder_name)
         sub_subfolders = Dir.entries(sub_subfolder_path).select do |entry|
           File.directory?(File.join(sub_subfolder_path, entry)) && !(entry == '.' || entry == '..')
         end rescue []
     
-        if sub_subfolders.any? { |sub_subfolder| valid_sub_subfolder_names.include?(sub_subfolder) }
-          @@subfolder_paths << File.join(selected_folder, folder_name)
-          formatted_subfolders << formatted_name
-        else
-          # Search directly in the provided path if not found in the subfolder
-          direct_sub_subfolders = Dir.entries(selected_folder).select do |entry|
-            File.directory?(File.join(selected_folder, entry)) && valid_sub_subfolder_names.include?(entry) && !(entry == '.' || entry == '..')
-          end rescue []
-    
-          if direct_sub_subfolders.any?
-            @@subfolder_paths << selected_folder
-            formatted_name = File.basename(selected_folder).rpartition('_')[0]
+        case source
+        when "onClickButton" # Add only folders without `.hdr` files
+          if sub_subfolders.any? { |sub_subfolder| 
+            valid_sub_subfolder_names.include?(sub_subfolder) &&
+            !Dir.entries(File.join(sub_subfolder_path, sub_subfolder)).any? { |file| file.end_with?('.hdr') }
+          }
+            @@subfolder_paths << File.join(selected_folder, folder_name)
             formatted_subfolders << formatted_name
-            break
+          else
+            direct_sub_subfolders = Dir.entries(selected_folder).select do |entry|
+              File.directory?(File.join(selected_folder, entry)) &&
+              valid_sub_subfolder_names.include?(entry) &&
+              !Dir.entries(File.join(selected_folder, entry)).any? { |file| file.end_with?('.hdr') }
+            end rescue []
+    
+            if direct_sub_subfolders.any?
+              @@subfolder_paths << selected_folder
+              formatted_name = File.basename(selected_folder).rpartition('_')[0]
+              formatted_subfolders << formatted_name
+              break
+            end
           end
+    
+        when "onHdriButton" # Add only folders with `.hdr` files
+          valid_folders = sub_subfolders.select do |sub_subfolder|
+            valid_sub_subfolder_names.include?(sub_subfolder) &&
+            Dir.entries(File.join(sub_subfolder_path, sub_subfolder)).any? { |file| file.end_with?('.hdr') }
+          end
+    
+          if valid_folders.any?
+            @@subfolder_paths << File.join(selected_folder, folder_name)
+            formatted_subfolders << formatted_name
+            hdr_condition_met = true
+          else
+            direct_sub_subfolders = Dir.entries(selected_folder).select do |entry|
+              File.directory?(File.join(selected_folder, entry)) &&
+              valid_sub_subfolder_names.include?(entry) &&
+              Dir.entries(File.join(selected_folder, entry)).any? { |file| file.end_with?('.hdr') }
+            end rescue []
+    
+            if direct_sub_subfolders.any?
+              @@subfolder_paths << selected_folder
+              formatted_name = File.basename(selected_folder).rpartition('_')[0]
+              formatted_subfolders << formatted_name
+              hdr_condition_met = true
+              break
+            end
+          end
+        else
+          puts "Invalid source argument for Add to Queue: #{source}"
         end
       end
     
       if formatted_subfolders.any?
         @@dialog.execute_script("addFolderToSubfolderList(#{formatted_subfolders.to_json})")
+        message = hdr_condition_met ? "Folders with .hdr files added." : "Folders without .hdr files added."
+        puts message
       else
-        UI.messagebox("No Reawote materials were found in selected path: #{selected_folder}")
+        UI.messagebox("No valid folders were found to add to the queue in: #{selected_folder}")
       end
-    end    
+    end 
 
     # List all subfolders in a given path and populate the dialog with the found subfolder names.
     def self.list_subfolders(path)
@@ -404,7 +444,8 @@ module Reawote
     end 
 
     def self.refresh_all(path, source)
-      @@subfolder_paths = []
+      puts "Subfolder paths before refresh: #{@@subfolder_paths}"
+      # @@subfolder_paths = []
       formatted_subfolders = []
     
       valid_sub_subfolder_names = (1..16).map { |n| "#{n}K" }
@@ -491,6 +532,7 @@ module Reawote
         # UI.messagebox("selected_folder: #{selected_folder}")
         refresh_all(selected_folder, source)
       end
+      puts "Subfolder paths after refresh: #{@@subfolder_paths}"
     end
 
     def self.clearInitialSelection
@@ -761,9 +803,13 @@ module Reawote
         list_subfolders(path)
       }
 
-      @@dialog.add_action_callback("browseNewFolder") { |action_context|
-        browse_new_folder
-      }
+      @@dialog.add_action_callback("browseNewFolder") do |action_context, source|
+        if source.nil? || source.empty?
+          puts "Error: Missing 'source' argument in browseNewFolder callback."
+        else
+          browse_new_folder(source)
+        end
+      end
 
       @@dialog.add_action_callback("refreshAllSubfolderLists") do |action_context, source|
         if source.nil? || source.empty?
@@ -829,6 +875,8 @@ module Reawote
             puts "Directory does not exist: #{selected_path}"
           end
         else
+          puts @@subfolder_paths
+          puts index
           puts "No match found for subfolder: #{subfolder_name}, Index: #{index}"
         end
       }
