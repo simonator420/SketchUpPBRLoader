@@ -468,7 +468,7 @@ module Reawote
         end rescue []
     
         case source
-        when "onClickButton" # Refresh Materials
+        when "onClickButton"
           if sub_subfolders.any? { |sub_subfolder| 
             valid_sub_subfolder_names.include?(sub_subfolder) &&
             !Dir.entries(File.join(sub_subfolder_path, sub_subfolder)).any? { |file| file.end_with?('.hdr') }
