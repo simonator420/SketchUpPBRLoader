@@ -3,11 +3,17 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@200;300;500&display=swap" rel="stylesheet">
   <script>
     function onClickButton() {
+      pathSelectedBy = "onClickButton";
       sketchup.browseFolder();
     }
 
     function browseModel() {
       sketchup.browseModel();
+    }
+
+    function onHdriButton() {
+      pathSelectedBy = "onHdriButton";
+      sketchup.browseHdri();
     }
 
     function selectNewFolder() {
@@ -16,16 +22,48 @@
 
     function updateFolderPath(path) {
       document.getElementById('folderPath').innerText = path;
-      sketchup.listSubfolders(path);
+
+      // Check which button triggered the path selection
+      if (pathSelectedBy === "onClickButton") {
+        enableCheckboxes();
+        document.getElementById('btnLoadHdris').disabled = true; // Keep "Load HDRIs" disabled
+        sketchup.listSubfolders(path);
+      } else if (pathSelectedBy === "onHdriButton") {
+        disableCheckboxes();
+        document.getElementById('btnLoadHdris').disabled = false; // Enable "Load HDRIs"
+        sketchup.listHdriFolders(path);
+      }
     }
 
-    function populateSubfolderList(subfolders) {
-      document.querySelectorAll('select, input[type="checkbox"], button').forEach(element => {
+    function enableCheckboxes() {
+      document.querySelectorAll('input[type="checkbox"], button').forEach(element => {
         element.disabled = false;
       });
 
+      // Ensure "Load HDRIs" stays disabled unless explicitly enabled
+      document.getElementById('btnLoadHdris').disabled = true;
+    }
+
+    function disableCheckboxes() {
+      document.querySelectorAll('input[type="checkbox"], button').forEach(element => {
+        element.disabled = true;
+      });
+
+      // Enable small buttons like Clean, Add to Queue, etc.
+      document.getElementById('btnClean').disabled = false;
+      document.getElementById('btnAddToQueue').disabled = false;
+      document.getElementById('btnSelectAll').disabled = false;
+      document.getElementById('btnRefresh').disabled = false;
+
+      // Keep "Load HDRIs" disabled unless the HDRI path is selected
+      document.getElementById('btnLoadHdris').disabled = true;
+    }
+
+    function populateSubfolderList(subfolders) {
+
       document.querySelector('button[onclick="onClickButton()"]').disabled = true;
       document.querySelector('button[onclick="browseModel()"]').disabled = true;
+      document.querySelector('button[onclick="onHdriButton()"]').disabled = true;
 
       document.getElementById('loadAO').checked = true;
       document.getElementById('loadDisp').checked = true;
@@ -78,7 +116,30 @@
     }
 
     function refreshSubfolderList() {
-      sketchup.refreshAllSubfolderLists();
+      if (pathSelectedBy === "onClickButton") {
+        sketchup.refreshAllSubfolderLists("onClickButton"); // Refresh Materials
+      } else if (pathSelectedBy === "onHdriButton") {
+        sketchup.refreshAllSubfolderLists("onHdriButton"); // Refresh HDRIs
+      } else {
+        console.error("No valid source detected for refreshing subfolder list.");
+      }
+    }
+
+    function clearList() {
+      var list = document.getElementById('subfolderList');
+      list.innerHTML = '';
+    }
+
+    function populateHdriList(subfolders) {
+      var list = document.getElementById('subfolderList');
+      list.innerHTML = ''; // Clear previous list
+      subfolders.forEach(function (subfolder) {
+        var item = document.createElement('div');
+        item.className = 'checkbox-row';
+        item.innerHTML = '<input type="checkbox" id="' + subfolder +
+          '"><label for="' + subfolder + '">' + subfolder + '</label>';
+        list.appendChild(item);
+      });
     }
 
     function cleanPlugin() {
@@ -95,6 +156,7 @@
 
       document.querySelector('button[onclick="onClickButton()"]').disabled = false;
       document.querySelector('button[onclick="browseModel()"]').disabled = false;
+      document.querySelector('button[onclick="onHdriButton()"]').disabled = false;
 
       sketchup.clearInitialSelection();
     }
@@ -229,7 +291,7 @@
       <label>Material Folder:</label>
     </div>
     <div class="input">
-      <button onclick="onClickButton()">Browse Material</button>
+      <button onclick="onClickButton()">Browse Materials</button>
     </div>
   </div>
 
@@ -239,6 +301,15 @@
     </div>
     <div class="input">
       <button onclick="browseModel()">Browse Model</button>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="label">
+      <label>HDRI Folder:</label>
+    </div>
+    <div class="input">
+      <button onclick="onHdriButton()">Browse HDRI</button>
     </div>
   </div>
   
@@ -282,6 +353,10 @@
 
   <div class="row">
     <button id="btnLoadMaterials" class="full-width-button" onclick="loadMaterials()" disabled>Load Materials</button>
+  </div>
+
+  <div class="row">
+    <button id="btnLoadHdris" class="full-width-button" onclick="loadHdris()" disabled>Load HDRI</button>
   </div>
 
   <div class="button-row">

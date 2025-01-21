@@ -59,6 +59,17 @@ module Reawote
       end
     end
 
+    def self.browse_hdri
+      @@initial_selection.clear
+      @@subfolder_paths.clear
+      selected_folder = UI.select_directory(title: "Select a Folder")
+      if selected_folder
+        @@initial_selection << selected_folder
+        @@dialog.execute_script("updateFolderPath('#{selected_folder}')")
+        # UI.messagebox("Initial Selection: #{@@initial_selection}")
+      end
+    end
+
     # Browse and import a selected model folder, attempting to load SketchUp and VRMesh files, while configuring V-Ray materials.
     def self.browse_model
       selected_model_folder = UI.select_directory(title: "Select a Model Folder")
@@ -68,29 +79,69 @@ module Reawote
     
         message = "Selected Model Folder: #{selected_model_folder}\n"
         if skp_files.empty?
-          UI.messagebox("No SketchUp documents found in the selected folder.")
-        elsif vrmesh_files.empty?
-          UI.messagebox("No VRMesh found found in the selected folder.")
-        else
-          skp_file = skp_files.first
-          vrmesh_file = vrmesh_files.first
-          file_name = File.basename(vrmesh_file, ".*")
+          #UI.messagebox("No SketchUp documents found in the selected folder.")
+          Dir.glob(File.join(selected_model_folder, "*/")).each do |subdir|
+            skp_files = []
+            vrmesh_files = []
+            subdir_name = File.basename(subdir)
+            base_pattern = subdir_name.split('_')[0, 2].join('_')
+            skp_files += Dir.glob(File.join(subdir, "*.skp"))
+            vrmesh_files += Dir.glob(File.join(subdir, "*.vrmesh"))
+            if !skp_files.empty? && !vrmesh_files.empty?
+              import_model(skp_files, vrmesh_files, selected_model_folder)
+              return
+            end
 
-          # message += "Importing SketchUp document: #{File.basename(skp_file)}"
-          # UI.messagebox(message)
-          
-          model = Sketchup.active_model
-          definitions = model.definitions
-          begin
-            model.start_operation('Import SKP', true)
-            componentdefinition = definitions.load(skp_file)
-            if componentdefinition
-              instance = model.active_entities.add_instance(componentdefinition, IDENTITY)
-              context = VRay::Context.active
-              # defs = model.definitions
-              scene = context.scene
-              renderer = context.renderer
-              scene.change do
+            Dir.glob(File.join(subdir, "#{base_pattern}*")).each do |matching_folder|
+              if Dir.exist?(matching_folder)
+                skp_files += Dir.glob(File.join(matching_folder, "*.skp"))
+                vrmesh_files += Dir.glob(File.join(matching_folder, "*.vrmesh"))
+                import_model(skp_files, vrmesh_files, selected_model_folder)
+              end
+            end
+          end
+          return
+        end
+
+        if skp_files.empty?
+          UI.messagebox("No SketchUp documents found in the selected folder or its subdirectories.")
+        elsif vrmesh_files.empty?
+          UI.messagebox("No VRMesh found in the selected folder or its subdirectories.")
+        else
+          import_model(skp_files, vrmesh_files, selected_model_folder)
+        end
+      end
+    end
+
+    def self.assign_mat_properties(tex, model_folder)
+      if tex
+        tex_file_name = tex[:file]
+        separator = tex_file_name.include?('\\') ? '\\' : '/'
+        path_parts = tex_file_name.split(separator)
+        tex_base = path_parts[-1]
+        matching_files = Dir.glob(File.join(model_folder, "**", "*#{tex_base}"))
+        tex_path = matching_files.first
+        tex[:file] = tex_path
+      end
+    end
+
+    def self.import_model(skp_files, vrmesh_files, selected_model_folder)
+      skp_file = skp_files.first
+      model = Sketchup.active_model
+      definitions = model.definitions
+      begin
+        model.start_operation('Import SKP', true)
+        componentdefinition = definitions.load(skp_file, allow_newer: true)
+        if componentdefinition
+          instance = model.active_entities.add_instance(componentdefinition, IDENTITY)
+          context = VRay::Context.active
+            # defs = model.definitions
+            scene = context.scene
+            renderer = context.renderer
+            scene.change do
+
+              for vrmesh_file in vrmesh_files
+                file_name = File.basename(vrmesh_file, ".*")
                 vrmesh_path = "/#{file_name}"
                 vrmesh = scene["/#{file_name}"]
                 unless vrmesh
@@ -99,13 +150,16 @@ module Reawote
                   return
                 end
                 vrmesh[:file] = vrmesh_file
+              end
+
+              puts " "
                 materials = model.materials
                 for material in materials
+                  puts " "
                   material_name = material.name
-                  if material_name.include?(file_name)
+                  #if material_name.include?(file_name)
                     material_plugin_path = "/#{material_name}"
                     material_plugin = scene[material_plugin_path]
-
                     diffuse_tex = scene["/#{material_name}/Base/VRayBRDF/diffuseTexBitmap/BitmapBuffer"]
                     if diffuse_tex
                       diffuse_tex_file_name = diffuse_tex[:file]
@@ -149,24 +203,33 @@ module Reawote
                       displacement_tex_path = matching_files.first
                       displacement_tex[:file] = displacement_tex_path
                     end
+
+                    metallness_tex = scene["/#{material_name}/Base/VRayBRDF/metalnessTexBitmap/Bitmap"]
+                    if metallness_tex
+                      metallness_tex_file_name = metallness_tex[:file]
+                      separator = metallness_tex_file_name.include?('\\') ? '\\' : '/'
+                      path_parts = metallness_tex_file_name.split(separator)
+                      metallness_tex_base = path_parts[-1]
+                      matching_files = Dir.glob(File.join(selected_model_folder, "**", "*#{metallness_tex_base}"))
+                      mettalness_tex_path = matching_files.first
+                      metallness_tex[:file] = mettalness_tex_path
+                    end
+
+                    reflection_tex = scene["/#{material_name}/Base/VRayBRDF/reflectionTexBitmap/BitmapBuffer"]
+                    assign_mat_properties(reflection_tex, selected_model_folder)
                   end
+                  @@dialog.close
                 end
+              else
+                UI.messagebox("Failed to import file.")
               end
-              
-              @@dialog.close
-            else
-              UI.messagebox("Failed to import file.")
+            rescue => e
+              UI.messagebox("Error importing file: #{e.message}")
+            ensure
+              model.commit_operation
             end
-          rescue => e
-            UI.messagebox("Error importing file: #{e.message}")
-          ensure
-            model.commit_operation
           end
-        end
-      else
-        UI.messagebox("No folder selected.")
-      end
-    end
+
 
     # Allow the user to select a new folder to add to the initial selection queue, updating the dialog with subfolders if valid.
     def self.browse_new_folder
@@ -237,6 +300,17 @@ module Reawote
           File.directory?(File.join(sub_subfolder_path, entry)) && !(entry == '.' || entry == '..')
         end rescue []
     
+        # Skip this folder if any .hdr file is found in its valid xK subfolders
+        hdr_exists = sub_subfolders.any? do |sub_subfolder| 
+          valid_sub_subfolder_names.include?(sub_subfolder) &&
+          Dir.entries(File.join(sub_subfolder_path, sub_subfolder)).any? { |file| file.end_with?('.hdr') }
+        end
+    
+        if hdr_exists
+          puts "Skipping folder: #{folder_name} - Found .hdr file."
+          next
+        end
+    
         if sub_subfolders.any? { |sub_subfolder| valid_sub_subfolder_names.include?(sub_subfolder) }
           @@subfolder_paths << File.join(path, folder_name)
           formatted_subfolders << formatted_name
@@ -244,6 +318,16 @@ module Reawote
           direct_sub_subfolders = Dir.entries(path).select do |entry| 
             File.directory?(File.join(path, entry)) && valid_sub_subfolder_names.include?(entry) && !(entry == '.' || entry == '..')
           end rescue []
+    
+          # Skip if any .hdr file exists in these subfolders as well
+          hdr_exists_direct = direct_sub_subfolders.any? do |sub_subfolder|
+            Dir.entries(File.join(path, sub_subfolder)).any? { |file| file.end_with?('.hdr') }
+          end
+    
+          if hdr_exists_direct
+            puts "Skipping folder: #{folder_name} - Found .hdr file in direct subfolder."
+            next
+          end
     
           if direct_sub_subfolders.any?
             @@subfolder_paths << path
@@ -256,40 +340,156 @@ module Reawote
     
       if formatted_subfolders.any?
         @@dialog.execute_script("populateSubfolderList(#{formatted_subfolders.to_json})")
+        puts @@subfolder_paths
       else
         UI.messagebox("No Reawote materials were found in selected path: #{path}")
       end
     end
-
-    def self.refresh_all(path)
-      subfolders = Dir.entries(path).select { |entry| 
-        File.directory?(File.join(path, entry)) && !(entry =='.' || entry == '..') 
-      }.sort
     
-      formatted_subfolders = subfolders.map do |folder_name|
+    def self.list_hdri_folders(path)
+      @@subfolder_paths = []
+      formatted_subfolders = []
+    
+      valid_sub_subfolder_names = (1..16).map { |n| "#{n}K" }
+      subfolders = Dir.entries(path).select do |entry| 
+        File.directory?(File.join(path, entry)) && !(entry == '.' || entry == '..') 
+      end.sort rescue []
+    
+      subfolders.each do |folder_name|
         parts = folder_name.split("_")
-        formatted_name = if parts.count >= 3
-          "#{parts[0]}_#{parts[1]}_#{parts[2]}"
-        else
-          folder_name
+        formatted_name = parts.count >= 3 ? "#{parts[0]}_#{parts[1]}_#{parts[2]}" : folder_name
+    
+        sub_subfolder_path = File.join(path, folder_name)
+        sub_subfolders = Dir.entries(sub_subfolder_path).select do |entry|
+          File.directory?(File.join(sub_subfolder_path, entry)) && !(entry == '.' || entry == '..')
+        end rescue []
+    
+        # Check for valid xK subfolders
+        valid_folders = sub_subfolders.select do |sub_subfolder| 
+          valid_sub_subfolder_names.include?(sub_subfolder) && 
+          Dir.entries(File.join(sub_subfolder_path, sub_subfolder)).any? { |file| file.end_with?('.hdr') }
         end
     
-        full_path = File.join(path, folder_name)
-        @@subfolder_paths << full_path
+        if valid_folders.any?
+          @@subfolder_paths << File.join(path, folder_name)
+          formatted_subfolders << formatted_name
+        else
+          # Debug: Log why the folder was skipped
+          puts "Skipping folder: #{folder_name} - No valid xK folder with .hdr file found."
+          
+          # Check directly in the main path for valid xK subfolders
+          direct_sub_subfolders = Dir.entries(path).select do |entry| 
+            File.directory?(File.join(path, entry)) && 
+            valid_sub_subfolder_names.include?(entry) && 
+            Dir.entries(File.join(path, entry)).any? { |file| file.end_with?('.hdr') }
+          end rescue []
     
-        formatted_name
+          if direct_sub_subfolders.any?
+            @@subfolder_paths << path
+            formatted_name = File.basename(path).rpartition('_')[0]
+            formatted_subfolders << formatted_name
+            break
+          else
+            puts "No valid xK folders with .hdr files found directly under the main path."
+          end
+        end
       end
     
-      @@dialog.execute_script("addFolderToSubfolderList(#{formatted_subfolders.to_json})")
+      if formatted_subfolders.any?
+        @@dialog.execute_script("populateSubfolderList(#{formatted_subfolders.to_json})")
+        puts @@subfolder_paths
+      else
+        UI.messagebox("No Reawote materials were found in selected path: #{path}")
+      end
+    end 
+
+    def self.refresh_all(path, source)
+      @@subfolder_paths = []
+      formatted_subfolders = []
+    
+      valid_sub_subfolder_names = (1..16).map { |n| "#{n}K" }
+      
+      subfolders = Dir.entries(path).select do |entry|
+        File.directory?(File.join(path, entry)) && !(entry == '.' || entry == '..')
+      end.sort rescue []
+    
+      subfolders.each do |folder_name|
+        parts = folder_name.split("_")
+        formatted_name = if parts.count >= 3
+                           "#{parts[0]}_#{parts[1]}_#{parts[2]}"
+                         else
+                           folder_name
+                         end
+    
+        sub_subfolder_path = File.join(path, folder_name)
+        sub_subfolders = Dir.entries(sub_subfolder_path).select do |entry|
+          File.directory?(File.join(sub_subfolder_path, entry)) && !(entry == '.' || entry == '..')
+        end rescue []
+    
+        case source
+        when "onClickButton" # Refresh Materials
+          if sub_subfolders.any? { |sub_subfolder| 
+            valid_sub_subfolder_names.include?(sub_subfolder) &&
+            !Dir.entries(File.join(sub_subfolder_path, sub_subfolder)).any? { |file| file.end_with?('.hdr') }
+          }
+            @@subfolder_paths << File.join(path, folder_name)
+            formatted_subfolders << formatted_name
+          else
+            direct_sub_subfolders = Dir.entries(path).select do |entry|
+              File.directory?(File.join(path, entry)) && 
+              valid_sub_subfolder_names.include?(entry) &&
+              !Dir.entries(File.join(path, entry)).any? { |file| file.end_with?('.hdr') }
+            end rescue []
+        
+            if direct_sub_subfolders.any?
+              @@subfolder_paths << path
+              formatted_name = File.basename(path).rpartition('_')[0]
+              formatted_subfolders << formatted_name
+              break
+            end
+          end
+
+        when "onHdriButton" # Refresh HDRIs
+          valid_folders = sub_subfolders.select do |sub_subfolder|
+            valid_sub_subfolder_names.include?(sub_subfolder) &&
+            Dir.entries(File.join(sub_subfolder_path, sub_subfolder)).any? { |file| file.end_with?('.hdr') }
+          end
+    
+          if valid_folders.any?
+            @@subfolder_paths << File.join(path, folder_name)
+            formatted_subfolders << formatted_name
+          else
+            direct_sub_subfolders = Dir.entries(path).select do |entry|
+              File.directory?(File.join(path, entry)) && valid_sub_subfolder_names.include?(entry) &&
+              Dir.entries(File.join(path, entry)).any? { |file| file.end_with?('.hdr') }
+            end rescue []
+    
+            if direct_sub_subfolders.any?
+              @@subfolder_paths << path
+              formatted_name = File.basename(path).rpartition('_')[0]
+              formatted_subfolders << formatted_name
+              break
+            end
+          end
+        else
+          puts "Invalid source argument: #{source}"
+        end
+      end
+    
+      if formatted_subfolders.any?
+        @@dialog.execute_script("addFolderToSubfolderList(#{formatted_subfolders.to_json})")
+      else
+        UI.messagebox("No valid folders found in the selected path: #{path}")
+      end
     end
     
     
-    def self.refreshAllSubfolderLists
+    def self.refreshAllSubfolderLists(source)
       @@subfolder_paths.clear
       @@dialog.execute_script("clearList();")
       for selected_folder in @@initial_selection do
         # UI.messagebox("selected_folder: #{selected_folder}")
-        refresh_all(selected_folder)
+        refresh_all(selected_folder, source)
       end
     end
 
@@ -545,8 +745,16 @@ module Reawote
         browse_model
       }
 
+      @@dialog.add_action_callback("browseHdri") { |action_context|
+        browse_hdri
+      }
+      
       @@dialog.add_action_callback("listSubfolders") { |action_context, path|
         list_subfolders(path)
+      }
+
+      @@dialog.add_action_callback("listHdriFolders") { |action_context, path|
+        list_hdri_folders(path)
       }
 
       @@dialog.add_action_callback("refreshSubfolderList") { |action_context, path|
@@ -557,9 +765,13 @@ module Reawote
         browse_new_folder
       }
 
-      @@dialog.add_action_callback("refreshAllSubfolderLists") { |action_context|
-        refreshAllSubfolderLists
-      }
+      @@dialog.add_action_callback("refreshAllSubfolderLists") do |action_context, source|
+        if source.nil? || source.empty?
+          puts "Error: Missing 'source' argument in refreshAllSubfolderLists callback."
+        else
+          refreshAllSubfolderLists(source)
+        end
+      end
 
       @@dialog.add_action_callback("createVrayMaterial") { |action_context, subfolder_name|
         create_vray_material(subfolder_name)
