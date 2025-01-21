@@ -130,6 +130,31 @@ module Reawote
       model = context.model
       scene = context.scene
       renderer = context.renderer
+      valid_sub_subfolder_names = (1..16).map { |n| "#{n}K" }
+      selected_path = nil
+
+      @@subfolder_paths.each do |path|
+        last_part = path.split('/').last
+        if last_part.include?(hdri_name)
+          Dir.entries(path).each do |subdir|
+            next if subdir == '.' || subdir == '..'  # Skip current and parent directory listings
+            if valid_sub_subfolder_names.include?(subdir)
+              selected_path = File.join(path, subdir)  # Update selected_path with the valid subdirectory path
+              break  # Found a valid subdirectory, so we can stop looking further
+            end
+          end
+        end
+        break if selected_path  # If we've found our path, no need to continue
+      end
+      puts selected_path
+
+      # Find the .hdr file in the selected path
+      hdr_file = Dir.glob(File.join(selected_path, '*.hdr')).first
+      unless hdr_file
+        UI.messagebox("No .hdr file found in the selected folder: #{selected_path}")
+        return
+      end
+      puts hdr_file
     
       unless scene && renderer
         UI.messagebox("V-Ray for SketchUp is not detected!")
@@ -141,6 +166,15 @@ module Reawote
         hdri_plugin_path = "/#{hdri_name}"
         my_hdri_plugin = scene.create(:LightDome, hdri_plugin_path)
 
+        bitmap_path = "/#{hdri_name}/Bitmap/Bitmap"
+        bitmap = scene.create(:BitmapBuffer, bitmap_path)
+        bitmap[:file] = hdr_file
+
+        texture_path = "/#{hdri_name}/Bitmap"
+        texture = scene.create(:TexBitmap, texture_path)
+        texture[:bitmap] = bitmap
+
+        my_hdri_plugin[:dome_tex] = texture
       end
     end
 
