@@ -490,7 +490,7 @@ module Reawote
             end
           end
 
-        when "onHdriButton" # Refresh HDRIs
+        when "onHdriButton"
           valid_folders = sub_subfolders.select do |sub_subfolder|
             valid_sub_subfolder_names.include?(sub_subfolder) &&
             Dir.entries(File.join(sub_subfolder_path, sub_subfolder)).any? { |file| file.end_with?('.hdr') }
