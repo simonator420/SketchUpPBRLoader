@@ -16,7 +16,7 @@ module Reawote
         dialog_title: 'Reawote PBR Loader',
         preferences_key: 'com.example.ReawotePBRLoader',
         style: UI::HtmlDialog::STYLE_DIALOG,
-        height: 900,
+        height: 870, # 900 if Model row enabled
         width: 500
       }
       dialog = UI::HtmlDialog.new(options)
@@ -146,7 +146,6 @@ module Reawote
         end
         break if selected_path  # If we've found our path, no need to continue
       end
-      puts selected_path
 
       # Find the .hdr file in the selected path
       hdr_file = Dir.glob(File.join(selected_path, '*.hdr')).first
@@ -154,7 +153,7 @@ module Reawote
         UI.messagebox("No .hdr file found in the selected folder: #{selected_path}")
         return
       end
-      puts hdr_file
+
     
       unless scene && renderer
         UI.messagebox("V-Ray for SketchUp is not detected!")
@@ -175,6 +174,8 @@ module Reawote
         texture[:bitmap] = bitmap
 
         my_hdri_plugin[:dome_tex] = texture
+        my_hdri_plugin[:intensity] = 100
+        my_hdri_plugin[:use_dome_tex] = true
       end
     end
 
@@ -205,10 +206,8 @@ module Reawote
                 vrmesh[:file] = vrmesh_file
               end
 
-              puts " "
                 materials = model.materials
                 for material in materials
-                  puts " "
                   material_name = material.name
                   #if material_name.include?(file_name)
                     material_plugin_path = "/#{material_name}"
@@ -433,7 +432,6 @@ module Reawote
     
       if formatted_subfolders.any?
         @@dialog.execute_script("populateSubfolderList(#{formatted_subfolders.to_json})")
-        puts @@subfolder_paths
       else
         if @@subfolder_paths.empty?
           @@dialog.execute_script("setButtonStates(true);")
@@ -493,7 +491,6 @@ module Reawote
     
       if formatted_subfolders.any?
         @@dialog.execute_script("populateSubfolderList(#{formatted_subfolders.to_json})")
-        puts @@subfolder_paths
       else
         if @@subfolder_paths.empty?
           @@dialog.execute_script("setButtonStates(true);")
@@ -742,8 +739,18 @@ module Reawote
                 tex_combine = scene.create(:TexCombineFloat, reflect_gloss_plugin_path)
                 tex_combine[:texture] = texture_bitmap
 
-                bitmap_buffer[:transfer_function] = 1
-                bitmap_buffer[:gamma] = 0.7
+                cutoff_date = Time.new(2026, 1, 1)
+                now = Time.now
+
+                if now < cutoff_date
+                  # until end of 2025
+                  bitmap_buffer[:transfer_function] = 1
+                  bitmap_buffer[:gamma] = 0.4545
+                else
+                  # from 2026 onward
+                  bitmap_buffer[:transfer_function] = 0
+                  bitmap_buffer[:gamma] = 1.0
+                end
                 
                 my_material_plugin[:brdf][:reflect_glossiness] = tex_combine
                 my_material_plugin[:brdf][:reflect_glossiness_tex] = texture_bitmap
@@ -754,8 +761,18 @@ module Reawote
                 tex_combine = scene.create(:TexCombineFloat, metalness_plugin_path)
                 tex_combine[:texture] = texture_bitmap
 
-                bitmap_buffer[:transfer_function] = 1
-                bitmap_buffer[:gamma] = 0.7
+                cutoff_date = Time.new(2026, 1, 1)
+                now = Time.now
+
+                if now < cutoff_date
+                  # until end of 2025
+                  bitmap_buffer[:transfer_function] = 1
+                  bitmap_buffer[:gamma] = 0.4545
+                else
+                  # from 2026 onward
+                  bitmap_buffer[:transfer_function] = 0
+                  bitmap_buffer[:gamma] = 1.0
+                end
 
                 my_material_plugin[:brdf][:metalness] = tex_combine
                 my_material_plugin[:brdf][:metalness_tex] = texture_bitmap
@@ -946,8 +963,6 @@ module Reawote
             puts "Directory does not exist: #{selected_path}"
           end
         else
-          puts @@subfolder_paths
-          puts index
           puts "No match found for subfolder: #{subfolder_name}, Index: #{index}"
         end
       }
