@@ -596,6 +596,31 @@ module Reawote
       @@subfolder_paths.clear
     end
 
+    # Get file modification/creation time (cross-platform)
+    def self.get_file_datetime(filepath)
+      if RUBY_PLATFORM.include?('darwin') # macOS
+        # On macOS, try to get creation time (birth time)
+        stat = File.stat(filepath)
+        # Use birth time if available, otherwise fall back to mtime
+        birth_time = stat.respond_to?(:birthtime) ? stat.birthtime : stat.mtime
+        return birth_time
+      else # Windows and others
+        # On Windows and Linux, use modification time
+        return File.mtime(filepath)
+      end
+    rescue => e
+      puts "Error getting file datetime for #{filepath}: #{e.message}"
+      return Time.now # Fallback to current time
+    end
+
+    # Check if file was modified/created before cutoff date
+    def self.is_file_pre_cutoff(filepath, cutoff_date)
+      file_date = get_file_datetime(filepath)
+      is_pre = file_date < cutoff_date
+      puts "[Reawote] File: #{File.basename(filepath)} | Date: #{file_date} | Pre-2026: #{is_pre}"
+      return is_pre
+    end
+
     # Create a V-Ray material
     def self.create_vray_material(material_name)
       context = VRay::Context.active
@@ -740,9 +765,8 @@ module Reawote
                 tex_combine[:texture] = texture_bitmap
 
                 cutoff_date = Time.new(2026, 1, 1)
-                now = Time.now
-
-                if now < cutoff_date
+  
+                if is_file_pre_cutoff(full_path, cutoff_date)
                   # until end of 2025
                   bitmap_buffer[:transfer_function] = 1
                   bitmap_buffer[:gamma] = 0.4545
@@ -762,9 +786,8 @@ module Reawote
                 tex_combine[:texture] = texture_bitmap
 
                 cutoff_date = Time.new(2026, 1, 1)
-                now = Time.now
-
-                if now < cutoff_date
+  
+                if is_file_pre_cutoff(full_path, cutoff_date)
                   # until end of 2025
                   bitmap_buffer[:transfer_function] = 1
                   bitmap_buffer[:gamma] = 0.4545
